@@ -208,7 +208,7 @@ const lessonContentHe: Record<string, {title: string, content: string, practice?
 
 ## שלושת עמודי התווך של בניית אתרים
 
-כל אתר אינטרנט מודרני מורכב משלוש שפות עיקריות. כל אחת מהן אחראית על משהו אחר לגמרי. נשתמש ב"משל גוף האדם" כדי להבין אותן:
+כל אתר אינטרנט מודרני מורכב משלוש שפות עיקריות. נשתמש ב"משל גוף האדם" כדי להבין אותן:
 
 ### 1. HTML - השלד (The Skeleton) 🦴
 זהו הבסיס המבני.
@@ -287,11 +287,7 @@ HTML היא לא "שפת תכנות" במובן הקלאסי (אין בה חיש
     זה הסימון איפה האלמנט נגמר.
     **חשוב מאוד:** שימו לב לסימן הלוכסן \`/\` (Slash) שיש בתגית הסגירה. זה מה שמבדיל אותה מתגית הפתיחה. בלי זה, הדפדפן יחשוב שהכפתור ממשיך לנצח!
 
-### דוגמאות נוספות:
-
-**כותרת (Heading):**
-\`\`\`html
-<h1>אני כותרת ראשית</h1>
+### דוגמאות נוסxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxית</h1>
 \`\`\`
 הדפדפן רואה \`h1\`, מבין שזו כותרת ענקית, ומציג את הטקסט "אני כותרת ראשית" בגדול ובמודגש.
 
@@ -576,6 +572,105 @@ HTML היא לא "שפת תכנות" במובן הקלאסי (אין בה חיש
   <li>בננה</li>
   <li>תפוז</li>
 </ul>`
+      }
+    ]
+  },
+  'html-forms': {
+    title: 'טפסים וקלט',
+    content: `
+# מדברים עם האתר: טפסים (Forms)
+
+עד עכשיו השיחה הייתה חד-צדדית. השרת דיבר, הדפדפן הציג, ואנחנו הקשבנו.
+הגיע הזמן שאנחנו נדבר בחזרה!
+
+טפסים (Forms) הם הדרך שלנו לשלוח מידע לאתר:
+*   התחברות (שם משתמש וסיסמה).
+*   הרשמה לניוזלטר.
+*   חיפוש בגוגל.
+*   העלאת תמונה לאינסטגרם.
+
+## המעטפת: תגית \`<form>\`
+כל טופס מתחיל בתגית \`<form>\`. היא המכולה של כל השדות.
+
+\`\`\`html
+<form>
+  <!-- כאן יהיו השדות -->
+</form>
+\`\`\`
+
+## הכוכב הראשי: \`<input>\`
+איך יוצרים שדה לכתיבה? משתמשים בתגית \`<input>\`.
+זוהי **תגית ללא סגירה** (כמו \`img\`), והיא מקבלת תכונה סופר-חשובה בשם \`type\`. התכונה הזו קובעת איך השדה יתנהג.
+
+### 1. טקסט רגיל (\`type="text"\`)
+זהו ברירת המחדל. שדה פשוט לכתיבת שם, כתובת וכו'.
+\`\`\`html
+<input type="text">
+\`\`\`
+
+### 2. סיסמה (\`type="password"\`)
+כמו טקסט, אבל מסתיר את מה שכותבים בכוכביות או עיגולים.
+\`\`\`html
+<input type="password">
+\`\`\`
+
+### 3. אימייל (\`type="email"\`)
+נראה כמו טקסט, אבל הדפדפן יודע לבדוק אם כתבתם שטרודל (@) וסיומת הגיונית לפני השליחה!
+\`\`\`html
+<input type="email">
+\`\`\`
+
+## עזרים למשתמש: Placeholder ו-Label
+
+כדי שהמשתמש ידע מה לכתוב, יש לנו שני כלים:
+
+### Placeholder (טקסט דמה)
+טקסט אפור שמופיע בתוך השדה ונעלם כשמתחילים להקליד.
+\`\`\`html
+<input type="text" placeholder="הקלד את שמך כאן...">
+\`\`\`
+
+### Label (תווית)
+זה הטקסט שמופיע *ליד* או *מעל* השדה (כמו "שם פרטי:").
+למה לא סתם לכתוב פסקה \`p\`? כי \`label\` משפר את הנגישות, וכשלוחצים עליו - הסמן קופץ אוטומטית לתוך השדה!
+
+\`\`\`html
+<label>
+  שם משתמש:
+  <input type="text">
+</label>
+\`\`\`
+
+## כפתור השליחה
+בסוף כל טופס חייב להיות כפתור שיגיד "סיימתי, שלח את המידע!".
+אנחנו משתמשים בתגית \`button\` עם סוג מיוחד:
+
+\`\`\`html
+<button type="submit">התחבר</button>
+\`\`\`
+    `,
+    practice: [
+      {
+        type: 'quiz',
+        id: 'q_forms_1',
+        question: 'מדוע חשוב להשתמש ב-type="password" עבור שדה סיסמה?',
+        options: ['כדי שהסיסמה תישלח מהר יותר לשרת', 'כדי להסתיר את התווים שהמשתמש מקליד (פרטיות)', 'כדי לשנות את צבע הרקע של השדה'],
+        correctAnswer: 1,
+        explanation: 'סוג password גורם לדפדפן להציג עיגולים או כוכביות במקום הטקסט האמיתי, כדי שמי שעומד מאחוריך לא יראה את הסיסמה.'
+      },
+      {
+        type: 'code',
+        id: 'c_forms_login',
+        title: 'בניית טופס התחברות',
+        language: 'html',
+        description: 'צור טופס (<form>) המכיל: שדה אימייל (type="email") עם placeholder "הכנס אימייל", שדה סיסמה (type="password") וכפתור שליחה (button type="submit") עם הטקסט "כניסה".',
+        initialCode: `<!-- בנה את הטופס כאן -->
+`,
+        solution: `<form>
+  <input type="email" placeholder="הכנס אימייל">
+  <input type="password" placeholder="סיסמה">
+  <button type="submit">כניסה</button>
+</form>`
       }
     ]
   },
@@ -1007,6 +1102,104 @@ Structure:
   <li>Banana</li>
   <li>Orange</li>
 </ul>`
+      }
+    ]
+  },
+  'html-forms': {
+    title: '8. Forms & Inputs',
+    content: `
+# Talking to the Website: Forms
+
+Until now, the conversation was one-sided. The server talked, the browser showed, and we listened.
+It's time for us to talk back!
+
+Forms are how we send data to the website:
+*   Login (Username & Password).
+*   Search on Google.
+*   Posting a tweet.
+
+## The Container: \`<form>\`
+Every form starts with the \`<form>\` tag. It wraps all the input fields.
+
+\`\`\`html
+<form>
+  <!-- Input fields go here -->
+</form>
+\`\`\`
+
+## The Main Star: \`<input>\`
+How do we create a field to type in? We use the \`<input>\` tag.
+It is a **self-closing tag** (like \`img\`), and it takes a super important attribute called \`type\`. This attribute decides how the field behaves.
+
+### 1. Plain Text (\`type="text"\`)
+The default. A simple field for names, addresses, etc.
+\`\`\`html
+<input type="text">
+\`\`\`
+
+### 2. Password (\`type="password"\`)
+Like text, but hides what you type with dots or stars.
+\`\`\`html
+<input type="password">
+\`\`\`
+
+### 3. Email (\`type="email"\`)
+Looks like text, but the browser checks if you included an "@" symbol before submitting!
+\`\`\`html
+<input type="email">
+\`\`\`
+
+## User Helpers: Placeholder and Label
+
+To help the user know what to type, we use two tools:
+
+### Placeholder
+Grey text that appears inside the field and disappears when you start typing.
+\`\`\`html
+<input type="text" placeholder="Type your name...">
+\`\`\`
+
+### Label
+Text that appears *next to* or *above* the field (like "First Name:").
+Why not just use a \`p\` tag? Because \`label\` improves accessibility, and clicking it focuses the input field!
+
+\`\`\`html
+<label>
+  Username:
+  <input type="text">
+</label>
+\`\`\`
+
+## The Submit Button
+At the end of every form, we need a button that says "I'm done, send the data!".
+We use the \`button\` tag with a special type:
+
+\`\`\`html
+<button type="submit">Login</button>
+\`\`\`
+    `,
+    practice: [
+      {
+        type: 'quiz',
+        id: 'q_forms_1_en',
+        question: 'Why is it important to use type="password" for password fields?',
+        options: ['To make the data reach the server faster', 'To hide the characters the user types (Privacy)', 'To change the background color of the input'],
+        correctAnswer: 1,
+        explanation: 'The password type makes the browser show dots or asterisks instead of the real text, preventing people behind you from seeing your password.'
+      },
+      {
+        type: 'code',
+        id: 'c_forms_login_en',
+        title: 'Build a Login Form',
+        language: 'html',
+        description: 'Create a form (<form>) containing: an email input (type="email") with placeholder "Enter email", a password input (type="password"), and a submit button (button type="submit") with text "Login".',
+        initialCode: `<!-- Build your form here -->
+`,
+        solution: `<form>
+  <input type="email" placeholder="Enter email">
+  <input type="password" placeholder="Password">
+  <button type="submit">Login</button>
+</form>`
       }
     ]
   },
