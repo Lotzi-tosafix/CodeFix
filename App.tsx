@@ -27,7 +27,7 @@ function App() {
   const [activeModule, setActiveModule] = useState<Module | null>(null);
   const [currentLesson, setCurrentLesson] = useState<{id: string, moduleTitle: string} | null>(null);
   
-  // Theme State with Lazy Initialization for Persistence
+  // Theme State with Lazy Initialization
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
         const savedTheme = localStorage.getItem('codefix_theme') as Theme;
@@ -47,41 +47,7 @@ function App() {
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [showGuestWarning, setShowGuestWarning] = useState(true);
 
-  // Initialize Session only (Lang is already handled in useState)
-  useEffect(() => {
-    // Check if there is a previously logged in user (Mock Session)
-    const storedUser = localStorage.getItem('codefix_current_user');
-    if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        loadUserProgress(parsedUser.email);
-        setShowGuestWarning(false);
-    } else {
-        setCompletedLessons([]);
-    }
-  }, []);
-
-  // Sync language to DOM
-  useEffect(() => {
-    localStorage.setItem('codefix_lang', lang);
-    document.dir = lang === 'he' ? 'rtl' : 'ltr';
-    document.documentElement.lang = lang; // Crucial for browser translation detection
-  }, [lang]);
-
-  // Save Theme preference
-  useEffect(() => {
-      localStorage.setItem('codefix_theme', theme);
-      document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
-
-  const toggleTheme = () => {
-      setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
-
-  const t = lang === 'he' ? he : en;
-  const courseData = getCourseData(t, lang);
-
-  // --- Auth & Data Simulation Logic ---
+  // --- Helpers defined before effects ---
 
   const loadUserProgress = (email: string) => {
       // Simulate fetching from DB
@@ -99,6 +65,40 @@ function App() {
       // Simulate saving to DB
       localStorage.setItem(`codefix_db_progress_${email}`, JSON.stringify(progress));
   };
+
+  // Initialize Session
+  useEffect(() => {
+    // Check if there is a previously logged in user (Mock Session)
+    const storedUser = localStorage.getItem('codefix_current_user');
+    if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        loadUserProgress(parsedUser.email);
+        setShowGuestWarning(false);
+    } else {
+        setCompletedLessons([]);
+    }
+  }, []);
+
+  // Sync language to DOM
+  useEffect(() => {
+    localStorage.setItem('codefix_lang', lang);
+    document.dir = lang === 'he' ? 'rtl' : 'ltr';
+    document.documentElement.lang = lang; 
+  }, [lang]);
+
+  // Save Theme preference
+  useEffect(() => {
+      localStorage.setItem('codefix_theme', theme);
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
+
+  const toggleTheme = () => {
+      setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  const t = lang === 'he' ? he : en;
+  const courseData = getCourseData(t, lang);
 
   const handleLogin = () => {
       // MOCK Google Login
@@ -172,7 +172,6 @@ function App() {
       if (user) {
           saveUserProgress(user.email, newCompleted);
       }
-      // If Guest: It stays in memory (state) only.
     }
   };
 
@@ -327,4 +326,4 @@ function App() {
   );
 }
 
-export default
+export default App;
