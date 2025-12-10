@@ -278,8 +278,8 @@ const LessonView: React.FC<LessonViewProps> = ({
   };
 
   const playChunk = async (text: string) => {
-      if (!text || text.length < 2) {
-          // Skip empty or tiny chunks
+      // Basic cleanup to prevent empty requests
+      if (!text || text.trim().length < 2) {
           setCurrentChunkIndex(prev => prev + 1);
           return;
       }
@@ -295,8 +295,9 @@ const LessonView: React.FC<LessonViewProps> = ({
           });
           
           if (!response.ok) {
-              const err = await response.text();
-              throw new Error(err || 'TTS Error');
+              // Read error content if available
+              const errText = await response.text().catch(() => 'Unknown error');
+              throw new Error(`Server returned ${response.status}: ${errText}`);
           }
           
           const blob = await response.blob();
@@ -306,30 +307,44 @@ const LessonView: React.FC<LessonViewProps> = ({
               audioRef.current.src = audioUrl;
               audioRef.current.onended = () => {
                   URL.revokeObjectURL(audioUrl); // Cleanup memory
-                  setCurrentChunkIndex(prev => prev + 1);
+                  // Wait a tiny bit before next chunk to avoid rapid-fire overlaps
+                  setTimeout(() => {
+                      setCurrentChunkIndex(prev => prev + 1);
+                  }, 100);
               };
-              await audioRef.current.play();
+              
+              // Handle playback promise to catch auto-play restrictions
+              const playPromise = audioRef.current.play();
+              if (playPromise !== undefined) {
+                  playPromise.catch(error => {
+                      console.error("Auto-play prevented:", error);
+                      stopAudio();
+                  });
+              }
           }
       } catch (e) {
           console.error("Audio Playback Error:", e);
-          // Don't stop entirely on one chunk error, try next
-          setCurrentChunkIndex(prev => prev + 1);
+          // CRITICAL FIX: Stop everything on error. Do not skip to next.
+          // This prevents the "flood" of 500 errors.
+          stopAudio(); 
+          alert(lang === 'he' ? "שגיאה בנגינת האודיו. אנא נסה שנית מאוחר יותר." : "Audio playback error. Please try again later.");
       } finally {
           setIsLoadingAudio(false);
       }
   };
 
   useEffect(() => {
+      // Only trigger if speaking is true and we have a valid index
       if (isSpeaking && currentChunkIndex >= 0) {
           if (currentChunkIndex < speechQueue.length) {
               playChunk(speechQueue[currentChunkIndex]);
           } else {
+              // End of playlist
               setIsSpeaking(false);
               setCurrentChunkIndex(-1);
           }
       }
   }, [currentChunkIndex, isSpeaking]); 
-  // removed speechQueue dependency to avoid re-triggering loops if queue doesn't change
 
   const toggleSpeech = () => {
     if (isSpeaking) {
@@ -337,16 +352,22 @@ const LessonView: React.FC<LessonViewProps> = ({
     } else {
       const textToRead = cleanMarkdownForSpeech(lessonData.content);
       
-      // Better chunking strategy: split by periods, questions, etc.
-      // This creates smaller chunks which process faster on serverless.
       const chunks = textToRead
-          .split(/([.?!])\s+/) // Split by sentence terminators
+          .split(/([.?!])\s+/) 
           .reduce((acc: string[], curr, idx, arr) => {
-             // Recombine the punctuation with the sentence
              if (idx % 2 === 0) {
                  const punctuation = arr[idx + 1] || '';
                  const sentence = (curr + punctuation).trim();
-                 if (sentence) acc.push(sentence);
+                 // Limit sentence length to avoid timeouts (approx 200 chars)
+                 if (sentence) {
+                     if (sentence.length > 200) {
+                         // Split long sentences by comma if possible, or just space
+                         const subChunks = sentence.match(/.{1,200}(?:\s|$)/g) || [sentence];
+                         acc.push(...subChunks);
+                     } else {
+                         acc.push(sentence);
+                     }
+                 }
              }
              return acc;
           }, []);
@@ -356,7 +377,6 @@ const LessonView: React.FC<LessonViewProps> = ({
           setCurrentChunkIndex(0);
           setIsSpeaking(true);
           
-          // Init audio element if not exists
           if (!audioRef.current) {
               audioRef.current = new Audio();
           }
