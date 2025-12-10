@@ -56,12 +56,15 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // User logged in
+        const myAdminEmails = ['y0527148273@gmail.com'];
+
         const newUser: User = {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || 'User',
           email: firebaseUser.email || '',
           avatar: firebaseUser.photoURL || '',
-          isAdmin: false // Keeps admin strictly local for this implementation
+          // Check if user email is in the admin list
+          isAdmin: firebaseUser.email ? myAdminEmails.includes(firebaseUser.email) : false
         };
         
         setUser(newUser);
@@ -119,13 +122,6 @@ function App() {
       } catch (error) {
         console.error("Logout failed:", error);
       }
-  };
-
-  const handleToggleAdmin = () => {
-      if (!user) return;
-      // Admin state is kept local for now
-      const updatedUser = { ...user, isAdmin: !user.isAdmin };
-      setUser(updatedUser);
   };
 
   // Navigation Handlers
@@ -238,7 +234,6 @@ function App() {
               completedLessons={completedLessons}
               onDeleteLesson={handleDeleteLesson}
               onResetProgress={handleResetProgress}
-              onToggleAdmin={handleToggleAdmin}
           />
       )}
 

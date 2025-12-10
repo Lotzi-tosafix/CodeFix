@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, TranslationStructure } from '../types';
-import { X, Trash2, LogOut, AlertTriangle, CheckCircle, ShieldAlert, Lock, Unlock } from 'lucide-react';
+import { X, Trash2, LogOut, AlertTriangle, CheckCircle, ShieldAlert } from 'lucide-react';
 import { getCourseData } from '../data';
 
 interface ProfileModalProps {
@@ -11,12 +11,11 @@ interface ProfileModalProps {
   completedLessons: string[];
   onDeleteLesson: (lessonId: string) => void;
   onResetProgress: () => void;
-  onToggleAdmin: () => void;
   lang: 'en' | 'he';
 }
 
 const ProfileModal: React.FC<ProfileModalProps> = ({ 
-  user, t, onClose, onLogout, completedLessons, onDeleteLesson, onResetProgress, onToggleAdmin, lang 
+  user, t, onClose, onLogout, completedLessons, onDeleteLesson, onResetProgress, lang 
 }) => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const courseData = getCourseData(t, lang);
@@ -64,27 +63,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                         {t.nav.logout}
                     </button>
                 </div>
-            </div>
-
-            {/* Admin Toggle */}
-            <div className="mb-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
-                 <div className="flex items-center justify-between">
-                     <div className="flex items-center gap-3">
-                         <div className={`p-2 rounded-lg ${user.isAdmin ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
-                             {user.isAdmin ? <Unlock size={20} /> : <Lock size={20} />}
-                         </div>
-                         <div>
-                             <h4 className="font-bold text-sm">{t.profile.adminMode}</h4>
-                             <p className="text-xs text-slate-500 dark:text-slate-400">{t.profile.adminModeDesc}</p>
-                         </div>
-                     </div>
-                     <button 
-                        onClick={onToggleAdmin}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 ${user.isAdmin ? 'bg-brand-600' : 'bg-slate-300 dark:bg-slate-700'}`}
-                     >
-                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${user.isAdmin ? 'translate-x-6' : 'translate-x-1'}`} />
-                     </button>
-                 </div>
             </div>
 
             {/* Progress Management */}
