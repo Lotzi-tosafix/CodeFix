@@ -21,16 +21,16 @@ interface LessonViewProps {
 
 const cleanMarkdownForSpeech = (markdown: string): string => {
   return markdown
-    .replace(/```[\s\S]*?```/g, ' Code example. ')
+    .replace(/```[\s\S]*?```/g, 'Code example.')
     .replace(/`([^`]+)`/g, '$1')
     .replace(/#{1,6}\s?/g, '')
     .replace(/(\*\*|__)(.*?)\1/g, '$2')
     .replace(/(\*|_)(.*?)\1/g, '$2')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/>\s?/g, '')
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, ' Image description: $1. ')
-    .replace(/^(\s*-\s|\s*\d+\.\s)/gm, '. ')
-    .replace(/\n+/g, '. '); // Replace newlines with periods to help sentence splitting
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, 'Image: $1')
+    .replace(/^(\s*-\s|\s*\d+\.\s)/gm, '')
+    .replace(/\n+/g, '. ');
 };
 
 const QuizComponent: React.FC<{ item: QuizPractice; t: TranslationStructure; onSolved: (id: string) => void }> = ({ item, t, onSolved }) => {
@@ -211,14 +211,7 @@ const LessonView: React.FC<LessonViewProps> = ({
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [isAiVisible, setIsAiVisible] = useState(true);
   const [completedPracticeItems, setCompletedPracticeItems] = useState<string[]>([]);
-  
-  // Audio State with Playlist (Chunking) logic
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  const [speechQueue, setSpeechQueue] = useState<string[]>([]);
-  const [currentChunkIndex, setCurrentChunkIndex] = useState(-1);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
   const scrollRef = useRef<HTMLDivElement>(null); 
   const mainContentRef = useRef<HTMLDivElement>(null); 
   const [justCompleted, setJustCompleted] = useState(false);
@@ -265,122 +258,21 @@ const LessonView: React.FC<LessonViewProps> = ({
     }
   };
 
-  const stopAudio = () => {
-      if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-          audioRef.current.onended = null;
-      }
-      setSpeechQueue([]);
-      setCurrentChunkIndex(-1);
-      setIsSpeaking(false);
-      setIsLoadingAudio(false);
-  };
-
-  const playChunk = async (text: string) => {
-      // Basic cleanup to prevent empty requests
-      if (!text || text.trim().length < 2) {
-          setCurrentChunkIndex(prev => prev + 1);
-          return;
-      }
-
-      setIsLoadingAudio(true);
-      try {
-          const voice = lang === 'he' ? 'he-IL-AvriNeural' : 'en-US-BrianNeural';
-          
-          const response = await fetch('/api/tts', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text, voice })
-          });
-          
-          if (!response.ok) {
-              // Read error content if available
-              const errText = await response.text().catch(() => 'Unknown error');
-              throw new Error(`Server returned ${response.status}: ${errText}`);
-          }
-          
-          const blob = await response.blob();
-          const audioUrl = URL.createObjectURL(blob);
-          
-          if (audioRef.current) {
-              audioRef.current.src = audioUrl;
-              audioRef.current.onended = () => {
-                  URL.revokeObjectURL(audioUrl); // Cleanup memory
-                  // Wait a tiny bit before next chunk to avoid rapid-fire overlaps
-                  setTimeout(() => {
-                      setCurrentChunkIndex(prev => prev + 1);
-                  }, 100);
-              };
-              
-              // Handle playback promise to catch auto-play restrictions
-              const playPromise = audioRef.current.play();
-              if (playPromise !== undefined) {
-                  playPromise.catch(error => {
-                      console.error("Auto-play prevented:", error);
-                      stopAudio();
-                  });
-              }
-          }
-      } catch (e) {
-          console.error("Audio Playback Error:", e);
-          // CRITICAL FIX: Stop everything on error. Do not skip to next.
-          // This prevents the "flood" of 500 errors.
-          stopAudio(); 
-          alert(lang === 'he' ? "שגיאה בנגינת האודיו. אנא נסה שנית מאוחר יותר." : "Audio playback error. Please try again later.");
-      } finally {
-          setIsLoadingAudio(false);
-      }
-  };
-
-  useEffect(() => {
-      // Only trigger if speaking is true and we have a valid index
-      if (isSpeaking && currentChunkIndex >= 0) {
-          if (currentChunkIndex < speechQueue.length) {
-              playChunk(speechQueue[currentChunkIndex]);
-          } else {
-              // End of playlist
-              setIsSpeaking(false);
-              setCurrentChunkIndex(-1);
-          }
-      }
-  }, [currentChunkIndex, isSpeaking]); 
-
   const toggleSpeech = () => {
     if (isSpeaking) {
-      stopAudio();
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
     } else {
       const textToRead = cleanMarkdownForSpeech(lessonData.content);
+      const utterance = new SpeechSynthesisUtterance(textToRead);
+      utterance.lang = lang === 'he' ? 'he-IL' : 'en-US';
+      utterance.rate = 1;
       
-      const chunks = textToRead
-          .split(/([.?!])\s+/) 
-          .reduce((acc: string[], curr, idx, arr) => {
-             if (idx % 2 === 0) {
-                 const punctuation = arr[idx + 1] || '';
-                 const sentence = (curr + punctuation).trim();
-                 // Limit sentence length to avoid timeouts (approx 200 chars)
-                 if (sentence) {
-                     if (sentence.length > 200) {
-                         // Split long sentences by comma if possible, or just space
-                         const subChunks = sentence.match(/.{1,200}(?:\s|$)/g) || [sentence];
-                         acc.push(...subChunks);
-                     } else {
-                         acc.push(sentence);
-                     }
-                 }
-             }
-             return acc;
-          }, []);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
 
-      if (chunks.length > 0) {
-          setSpeechQueue(chunks);
-          setCurrentChunkIndex(0);
-          setIsSpeaking(true);
-          
-          if (!audioRef.current) {
-              audioRef.current = new Audio();
-          }
-      }
+      window.speechSynthesis.speak(utterance);
+      setIsSpeaking(true);
     }
   };
 
@@ -396,18 +288,15 @@ const LessonView: React.FC<LessonViewProps> = ({
     setInput('');
     setCompletedPracticeItems([]); 
     
-    stopAudio();
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
 
     if (mainContentRef.current) {
       mainContentRef.current.scrollTop = 0;
     }
     
     return () => {
-       stopAudio();
-       if (audioRef.current) {
-           audioRef.current.pause();
-           audioRef.current = null;
-       }
+       window.speechSynthesis.cancel();
     };
   }, [lessonId]);
 
@@ -489,15 +378,9 @@ const LessonView: React.FC<LessonViewProps> = ({
 
             <button
                 onClick={toggleSpeech}
-                disabled={isLoadingAudio && !isSpeaking} // Allow stop while loading
                 className={`flex items-center px-4 py-2 rounded-full font-medium transition-all duration-300 ${isSpeaking ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-700'}`}
             >
-                {isLoadingAudio ? (
-                    <>
-                        <Loader2 size={18} className="mr-2 rtl:ml-2 rtl:mr-0 animate-spin" />
-                        Loading...
-                    </>
-                ) : isSpeaking ? (
+                {isSpeaking ? (
                     <>
                         <Square size={16} fill="currentColor" className="mr-2 rtl:ml-2 rtl:mr-0 animate-pulse" />
                         {t.lesson.stopReading}
