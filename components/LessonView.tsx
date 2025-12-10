@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TranslationStructure, Language, PracticeItem, QuizPractice, CodePractice } from '../types';
-import { ArrowLeft, CheckCircle, Send, Bot, RefreshCw, ArrowRight, Play, Eye, Code, HelpCircle, X, MessageCircle, Loader2, Lightbulb, PlayCircle, Volume2, Square, Trophy } from 'lucide-react';
-import { askAiTutor } from '../services/geminiService';
+import { ArrowLeft, CheckCircle, ArrowRight, Play, Eye, Code, HelpCircle, Loader2, Lightbulb, Square, Volume2, Trophy } from 'lucide-react';
 import { getLessonContent } from '../data';
 import Editor from "@monaco-editor/react";
 import confetti from 'canvas-confetti';
@@ -206,13 +205,8 @@ const CodePlayground: React.FC<{ item: CodePractice; t: TranslationStructure }> 
 const LessonView: React.FC<LessonViewProps> = ({ 
   t, lessonId, moduleTitle, onBack, lang, onComplete, isCompleted, nextLessonId, onNextLesson, onStartChallenge
 }) => {
-  const [input, setInput] = useState('');
-  const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([]);
-  const [isLoadingAi, setIsLoadingAi] = useState(false);
-  const [isAiVisible, setIsAiVisible] = useState(true);
   const [completedPracticeItems, setCompletedPracticeItems] = useState<string[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null); 
   const mainContentRef = useRef<HTMLDivElement>(null); 
   const [justCompleted, setJustCompleted] = useState(false);
 
@@ -221,20 +215,6 @@ const LessonView: React.FC<LessonViewProps> = ({
   const quizzes = lessonData.practice?.filter(p => p.type === 'quiz') || [];
   const allQuizzesCompleted = quizzes.length === 0 || quizzes.every(q => completedPracticeItems.includes(q.id));
   const canMarkComplete = isCompleted || allQuizzesCompleted;
-
-  const handleAskAi = async () => {
-    if (!input.trim()) return;
-    
-    const userMsg = input;
-    setInput('');
-    setChatHistory(prev => [...prev, { role: 'user', text: userMsg }]);
-    setIsLoadingAi(true);
-
-    const answer = await askAiTutor(userMsg, lessonData.content, lang);
-    
-    setChatHistory(prev => [...prev, { role: 'ai', text: answer }]);
-    setIsLoadingAi(false);
-  };
 
   const handleComplete = () => {
     if (!canMarkComplete) return;
@@ -277,15 +257,7 @@ const LessonView: React.FC<LessonViewProps> = ({
   };
 
   useEffect(() => {
-    if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [chatHistory, isAiVisible]);
-
-  useEffect(() => {
     setJustCompleted(false);
-    setChatHistory([]); 
-    setInput('');
     setCompletedPracticeItems([]); 
     
     window.speechSynthesis.cancel();
@@ -362,10 +334,10 @@ const LessonView: React.FC<LessonViewProps> = ({
   return (
     <div className="pt-20 h-screen flex flex-col md:flex-row overflow-hidden bg-slate-50 dark:bg-dark-bg relative transition-colors duration-300">
       
-      {/* Left Panel: Content */}
+      {/* Centered Content */}
       <div 
         ref={mainContentRef}
-        className={`h-full overflow-y-auto p-6 md:p-12 border-r border-slate-200 dark:border-slate-800 custom-scrollbar transition-all duration-300 ${isAiVisible ? 'w-full md:w-2/3' : 'w-full'}`}
+        className="h-full w-full overflow-y-auto p-6 md:p-12 custom-scrollbar transition-all duration-300 mx-auto max-w-5xl"
       >
         <div className="flex justify-between items-center mb-8">
             <button 
@@ -490,95 +462,6 @@ const LessonView: React.FC<LessonViewProps> = ({
             </div>
         </div>
       </div>
-
-      {/* Floating Button to Open AI */}
-      {!isAiVisible && (
-        <button 
-          onClick={() => setIsAiVisible(true)}
-          className="absolute bottom-6 right-6 rtl:right-auto rtl:left-6 z-20 bg-brand-600 hover:bg-brand-500 text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 flex items-center"
-          title={t.lesson.openAi}
-        >
-          <Bot size={24} />
-          <span className="ml-2 rtl:ml-0 rtl:mr-2 font-bold hidden md:inline">{t.lesson.openAi}</span>
-        </button>
-      )}
-
-      {/* Right Panel: AI Tutor */}
-      {isAiVisible && (
-          <div className="w-full md:w-1/3 h-[40vh] md:h-full bg-white dark:bg-slate-900 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl z-10 transition-all duration-300">
-            <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between backdrop-blur-md">
-                <div className="flex items-center">
-                    <div className="p-2 bg-gradient-to-tr from-brand-500 to-purple-600 rounded-lg text-white mr-3 rtl:mr-0 rtl:ml-3 shadow-lg">
-                        <Bot size={24} />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-slate-900 dark:text-white">{t.lesson.aiTutorTitle}</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 rtl:mr-0 rtl:ml-1.5 animate-pulse"></span>
-                        Online
-                        </p>
-                    </div>
-                </div>
-                <button 
-                    onClick={() => setIsAiVisible(false)}
-                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-                >
-                    <X size={20} />
-                </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={scrollRef}>
-                {chatHistory.length === 0 && (
-                    <div className="text-center text-slate-500 dark:text-slate-500 mt-10 p-6">
-                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-slate-700">
-                        <Bot size={32} className="opacity-50" />
-                        </div>
-                        <p className="text-sm">{t.lesson.aiTutorPlaceholder}</p>
-                    </div>
-                )}
-                {chatHistory.map((msg, idx) => (
-                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
-                        <div className={`max-w-[85%] rounded-2xl p-3 text-sm shadow-md leading-relaxed ${
-                            msg.role === 'user' 
-                            ? 'bg-brand-600 text-white rounded-br-none rtl:rounded-bl-none rtl:rounded-br-2xl' 
-                            : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none rtl:rounded-br-none rtl:rounded-bl-2xl'
-                        }`}>
-                            {msg.text}
-                        </div>
-                    </div>
-                ))}
-                {isLoadingAi && (
-                    <div className="flex justify-start">
-                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center space-x-2">
-                            <RefreshCw size={16} className="animate-spin text-brand-400" />
-                            <span className="text-xs text-slate-500 dark:text-slate-400">{t.lesson.loading}</span>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
-                <div className="relative">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAskAi()}
-                        placeholder={t.lesson.aiTutorPlaceholder}
-                        className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500/50 border border-slate-200 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 rtl:pr-4 rtl:pl-12 transition-all"
-                    />
-                    <button 
-                        onClick={handleAskAi}
-                        disabled={isLoadingAi || !input.trim()}
-                        className="absolute right-2 top-2 rtl:right-auto rtl:left-2 p-1.5 bg-brand-600 rounded-lg text-white hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-brand-500/20"
-                    >
-                        <Send size={18} />
-                    </button>
-                </div>
-            </div>
-          </div>
-      )}
-
     </div>
   );
 };

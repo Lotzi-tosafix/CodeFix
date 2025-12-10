@@ -1,6 +1,6 @@
 import React from 'react';
 import { TranslationStructure, ViewState } from '../types';
-import { Code2, Cpu, Zap, Heart, ArrowRight, Lightbulb } from 'lucide-react';
+import { Code2, Zap, Heart, ArrowRight, Lightbulb } from 'lucide-react';
 
 interface AboutProps {
   t: TranslationStructure;
@@ -24,8 +24,8 @@ const About: React.FC<AboutProps> = ({ t, setView }) => {
         </p>
       </div>
 
-      {/* Features Grid */}
-      <div className="grid md:grid-cols-3 gap-8 mb-24">
+      {/* Features Grid - Changed to 2 columns and removed AI Feature */}
+      <div className="grid md:grid-cols-2 gap-8 mb-24 max-w-4xl mx-auto">
         {/* Feature 1 */}
         <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-8 rounded-2xl hover:border-brand-500 hover:shadow-lg transition-all duration-300 group">
           <div className="bg-brand-100 dark:bg-brand-900/50 p-4 rounded-xl w-fit mb-6 text-brand-600 dark:text-brand-400 group-hover:scale-110 transition-transform">
@@ -37,18 +37,7 @@ const About: React.FC<AboutProps> = ({ t, setView }) => {
           </p>
         </div>
 
-        {/* Feature 2 */}
-        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-8 rounded-2xl hover:border-purple-500 hover:shadow-lg transition-all duration-300 group">
-          <div className="bg-purple-100 dark:bg-purple-900/50 p-4 rounded-xl w-fit mb-6 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
-            <Cpu size={32} />
-          </div>
-          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">{t.about.features.aiTitle}</h3>
-          <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-            {t.about.features.aiDesc}
-          </p>
-        </div>
-
-        {/* Feature 3 */}
+        {/* Feature 3 (Moved to 2nd position) */}
         <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-8 rounded-2xl hover:border-yellow-500 hover:shadow-lg transition-all duration-300 group">
           <div className="bg-yellow-100 dark:bg-yellow-900/50 p-4 rounded-xl w-fit mb-6 text-yellow-600 dark:text-yellow-400 group-hover:scale-110 transition-transform">
             <Zap size={32} />
