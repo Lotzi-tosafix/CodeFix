@@ -13,7 +13,16 @@ import { getCourseData } from './data';
 import { AlertTriangle } from 'lucide-react';
 
 function App() {
-  const [lang, setLang] = useState<Language>('en');
+  // Language State with Lazy Initialization
+  const [lang, setLang] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+        const savedLang = localStorage.getItem('codefix_lang') as Language;
+        if (savedLang) return savedLang;
+        return navigator.language.startsWith('he') ? 'he' : 'en';
+    }
+    return 'en';
+  });
+
   const [view, setView] = useState<ViewState>('home');
   const [activeModule, setActiveModule] = useState<Module | null>(null);
   const [currentLesson, setCurrentLesson] = useState<{id: string, moduleTitle: string} | null>(null);
@@ -38,16 +47,8 @@ function App() {
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [showGuestWarning, setShowGuestWarning] = useState(true);
 
-  // Initialize language
+  // Initialize Session only (Lang is already handled in useState)
   useEffect(() => {
-    const savedLang = localStorage.getItem('codefix_lang') as Language;
-    if (savedLang) {
-      setLang(savedLang);
-    } else {
-      const browserLang = navigator.language.startsWith('he') ? 'he' : 'en';
-      setLang(browserLang);
-    }
-    
     // Check if there is a previously logged in user (Mock Session)
     const storedUser = localStorage.getItem('codefix_current_user');
     if (storedUser) {
@@ -60,11 +61,11 @@ function App() {
     }
   }, []);
 
-  // Save language preference
+  // Sync language to DOM
   useEffect(() => {
     localStorage.setItem('codefix_lang', lang);
     document.dir = lang === 'he' ? 'rtl' : 'ltr';
-    document.documentElement.lang = lang;
+    document.documentElement.lang = lang; // Crucial for browser translation detection
   }, [lang]);
 
   // Save Theme preference
@@ -326,4 +327,4 @@ function App() {
   );
 }
 
-export default App;
+export default
