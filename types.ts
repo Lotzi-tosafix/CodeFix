@@ -1,12 +1,14 @@
 export type Language = 'en' | 'he';
+export type Theme = 'dark' | 'light';
 
-export type ViewState = 'home' | 'curriculum' | 'module' | 'lesson' | 'about';
+export type ViewState = 'home' | 'curriculum' | 'module' | 'lesson' | 'challenge' | 'about';
 
 export interface User {
   id: string;
   name: string;
   email: string;
   avatar: string;
+  isAdmin?: boolean; // God mode
 }
 
 export interface TranslationStructure {
@@ -35,6 +37,8 @@ export interface TranslationStructure {
     resetConfirm: string;
     noProgress: string;
     hello: string;
+    adminMode: string;
+    adminModeDesc: string;
   };
   hero: {
     titlePrefix: string;
@@ -94,6 +98,7 @@ export interface TranslationStructure {
     aiTutorButton: string;
     backToCurriculum: string; // Actually back to module
     nextLesson: string;
+    finalChallenge: string;
     completed: string;
     markComplete: string;
     markCompleteAction: string;
@@ -102,6 +107,15 @@ export interface TranslationStructure {
     openAi: string;
     readAloud: string;
     stopReading: string;
+  };
+  challenge: {
+    title: string;
+    description: string;
+    task: string;
+    runTests: string;
+    success: string;
+    failure: string;
+    backToModule: string;
   };
   practice: {
     title: string;
@@ -138,6 +152,16 @@ export interface CodePractice {
 
 export type PracticeItem = QuizPractice | CodePractice;
 
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  initialCode: string;
+  solutionCode: string; // Simple check
+  language: 'html' | 'css' | 'javascript';
+  validation: (code: string) => boolean;
+}
+
 export interface Module {
   id: string;
   titleKey: keyof TranslationStructure['curriculum']['modules'];
@@ -146,6 +170,7 @@ export interface Module {
   description: string; // Fallback description
   lessons: Lesson[];
   locked: boolean;
+  finalChallenge?: Challenge;
 }
 
 export interface Lesson {

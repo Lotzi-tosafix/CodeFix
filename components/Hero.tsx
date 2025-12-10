@@ -21,19 +21,19 @@ const Hero: React.FC<HeroProps> = ({ t, setView, lang }) => {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center z-10">
         
-        <div className="inline-flex items-center px-4 py-2 rounded-full border border-brand-500/30 bg-brand-500/10 text-brand-300 text-sm font-medium mb-8 backdrop-blur-sm animate-fade-in-up">
+        <div className="inline-flex items-center px-4 py-2 rounded-full border border-brand-500/30 bg-white/50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 text-sm font-medium mb-8 backdrop-blur-sm animate-fade-in-up">
           <Sparkles size={16} className="mr-2 rtl:ml-2 rtl:mr-0" />
           <span>CodeFix v1.0</span>
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white mb-6 leading-tight">
+        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6 leading-tight">
           {t.hero.titlePrefix} <br className="hidden md:block"/>
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-purple-500">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-purple-600 dark:from-brand-400 dark:to-purple-500">
             {t.hero.titleHighlight}
           </span>
         </h1>
 
-        <p className="mt-4 max-w-2xl text-xl text-slate-400 mb-10 leading-relaxed">
+        <p className="mt-4 max-w-2xl text-xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed">
           {t.hero.subtitle}
         </p>
 
@@ -51,34 +51,34 @@ const Hero: React.FC<HeroProps> = ({ t, setView, lang }) => {
           
           <button 
             onClick={() => setView('about')}
-            className="px-8 py-4 bg-slate-800 rounded-full text-slate-200 font-bold text-lg border border-slate-700 hover:bg-slate-700 transition-all hover:-translate-y-1"
+            className="px-8 py-4 bg-white dark:bg-slate-800 rounded-full text-slate-700 dark:text-slate-200 font-bold text-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:-translate-y-1"
           >
             {t.hero.ctaSecondary}
           </button>
         </div>
 
         {/* Stats */}
-        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-8 w-full max-w-4xl border-t border-slate-800 pt-8">
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-8 w-full max-w-4xl border-t border-slate-200 dark:border-slate-800 pt-8">
           <div className="flex flex-col items-center">
-            <div className="p-3 bg-brand-900/30 rounded-full mb-3 text-brand-400">
+            <div className="p-3 bg-brand-100 dark:bg-brand-900/30 rounded-full mb-3 text-brand-600 dark:text-brand-400">
               <Users size={24} />
             </div>
-            <h3 className="text-2xl font-bold text-white">10k+</h3>
-            <p className="text-slate-500 text-sm">{t.hero.stats_students}</p>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">10k+</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">{t.hero.stats_students}</p>
           </div>
           <div className="flex flex-col items-center">
-             <div className="p-3 bg-purple-900/30 rounded-full mb-3 text-purple-400">
+             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-full mb-3 text-purple-600 dark:text-purple-400">
               <Code size={24} />
             </div>
-            <h3 className="text-2xl font-bold text-white">150+</h3>
-            <p className="text-slate-500 text-sm">{t.hero.stats_lessons}</p>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">150+</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">{t.hero.stats_lessons}</p>
           </div>
           <div className="flex flex-col items-center">
-             <div className="p-3 bg-yellow-900/30 rounded-full mb-3 text-yellow-400">
+             <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-full mb-3 text-yellow-600 dark:text-yellow-400">
               <Star size={24} />
             </div>
-            <h3 className="text-2xl font-bold text-white">4.9/5</h3>
-            <p className="text-slate-500 text-sm">{t.hero.stats_rating}</p>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">4.9/5</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">{t.hero.stats_rating}</p>
           </div>
         </div>
 

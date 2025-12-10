@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TranslationStructure, Language, PracticeItem, QuizPractice, CodePractice } from '../types';
-import { ArrowLeft, CheckCircle, Send, Bot, RefreshCw, ArrowRight, Play, Eye, Code, HelpCircle, X, MessageCircle, Loader2, Lightbulb, PlayCircle, Volume2, Square } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Send, Bot, RefreshCw, ArrowRight, Play, Eye, Code, HelpCircle, X, MessageCircle, Loader2, Lightbulb, PlayCircle, Volume2, Square, Trophy } from 'lucide-react';
 import { askAiTutor } from '../services/geminiService';
 import { getLessonContent } from '../data';
 import Editor from "@monaco-editor/react";
+import confetti from 'canvas-confetti';
 
 interface LessonViewProps {
   t: TranslationStructure;
@@ -15,28 +16,20 @@ interface LessonViewProps {
   isCompleted: boolean;
   nextLessonId: string | null;
   onNextLesson: (id: string) => void;
+  onStartChallenge: () => void;
 }
 
 const cleanMarkdownForSpeech = (markdown: string): string => {
   return markdown
-    // Remove code blocks as reading them is annoying
     .replace(/```[\s\S]*?```/g, 'Code example.')
-    // Remove inline code ticks
     .replace(/`([^`]+)`/g, '$1')
-    // Remove headers syntax
     .replace(/#{1,6}\s?/g, '')
-    // Remove bold/italic
     .replace(/(\*\*|__)(.*?)\1/g, '$2')
     .replace(/(\*|_)(.*?)\1/g, '$2')
-    // Remove links but keep text [text](url) -> text
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    // Remove blockquotes
     .replace(/>\s?/g, '')
-    // Remove images
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, 'Image: $1')
-    // Remove lists markers
     .replace(/^(\s*-\s|\s*\d+\.\s)/gm, '')
-    // Replace newlines with pauses
     .replace(/\n+/g, '. ');
 };
 
@@ -53,10 +46,10 @@ const QuizComponent: React.FC<{ item: QuizPractice; t: TranslationStructure; onS
   }, [submitted, isCorrect, item.id, onSolved]);
 
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 mb-8 shadow-lg">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 mb-8 shadow-lg">
       <div className="flex items-center mb-4">
-        <HelpCircle className="text-brand-400 mr-2 rtl:mr-0 rtl:ml-2" size={24} />
-        <h3 className="text-lg font-bold text-white">{item.question}</h3>
+        <HelpCircle className="text-brand-500 dark:text-brand-400 mr-2 rtl:mr-0 rtl:ml-2" size={24} />
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">{item.question}</h3>
       </div>
       
       <div className="space-y-3">
@@ -68,20 +61,20 @@ const QuizComponent: React.FC<{ item: QuizPractice; t: TranslationStructure; onS
             className={`
               w-full text-start p-4 rounded-lg border transition-all flex justify-between items-center
               ${submitted && idx === item.correctAnswer && idx === selected
-                ? 'bg-green-900/30 border-green-500 text-green-100' 
+                ? 'bg-green-100 dark:bg-green-900/30 border-green-500 text-green-800 dark:text-green-100' 
                 : submitted && idx === selected && idx !== item.correctAnswer
-                  ? 'bg-red-900/30 border-red-500 text-red-100'
-                  : 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-300'}
+                  ? 'bg-red-100 dark:bg-red-900/30 border-red-500 text-red-800 dark:text-red-100'
+                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'}
             `}
           >
             <span>{option}</span>
-            {submitted && idx === item.correctAnswer && idx === selected && <CheckCircle size={18} className="text-green-400" />}
+            {submitted && idx === item.correctAnswer && idx === selected && <CheckCircle size={18} className="text-green-600 dark:text-green-400" />}
           </button>
         ))}
       </div>
 
       {submitted && (
-        <div className={`mt-4 p-4 rounded-lg ${isCorrect ? 'bg-green-900/20 text-green-200' : 'bg-red-900/20 text-red-200'} animate-fade-in-up`}>
+        <div className={`mt-4 p-4 rounded-lg ${isCorrect ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200'} animate-fade-in-up`}>
           <p className="font-bold mb-1">
             {isCorrect ? t.practice.quizCorrect : t.practice.quizIncorrect}
           </p>
@@ -97,10 +90,9 @@ const QuizComponent: React.FC<{ item: QuizPractice; t: TranslationStructure; onS
 const CodePlayground: React.FC<{ item: CodePractice; t: TranslationStructure }> = ({ item, t }) => {
   const [code, setCode] = useState(item.initialCode);
   const [showSolution, setShowSolution] = useState(false);
-  const [previewKey, setPreviewKey] = useState(0); // To force iframe refresh
+  const [previewKey, setPreviewKey] = useState(0); 
   const [isRunning, setIsRunning] = useState(false);
 
-  // For HTML/CSS, we create a data URI for the iframe
   const srcDoc = `
     <html>
       <style>
@@ -113,27 +105,27 @@ const CodePlayground: React.FC<{ item: CodePractice; t: TranslationStructure }> 
   `;
 
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden mb-8 shadow-lg flex flex-col">
-      <div className="p-4 border-b border-slate-700 bg-slate-800 flex justify-between items-center">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden mb-8 shadow-lg flex flex-col">
+      <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex justify-between items-center">
         <div className="flex items-center">
-          <Code className="text-brand-400 mr-2 rtl:mr-0 rtl:ml-2" size={20} />
-          <h3 className="font-bold text-white text-sm md:text-base">{item.title}</h3>
+          <Code className="text-brand-500 dark:text-brand-400 mr-2 rtl:mr-0 rtl:ml-2" size={20} />
+          <h3 className="font-bold text-slate-900 dark:text-white text-sm md:text-base">{item.title}</h3>
         </div>
         <button 
           onClick={() => setShowSolution(!showSolution)}
-          className="text-xs text-slate-400 hover:text-white underline transition-colors"
+          className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white underline transition-colors"
         >
           {showSolution ? t.practice.hideSolution : t.practice.showSolution}
         </button>
       </div>
 
-      <div className="p-4 bg-slate-900/50 text-slate-300 text-sm border-b border-slate-800">
+      <div className="p-4 bg-slate-50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-300 text-sm border-b border-slate-200 dark:border-slate-800">
         {item.description}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 h-[400px]">
         {/* Editor */}
-        <div className="flex flex-col border-b lg:border-b-0 lg:border-r border-slate-700 bg-[#1e1e1e]">
+        <div className="flex flex-col border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-700 bg-[#1e1e1e]">
           <div className="bg-slate-950 p-2 text-xs text-slate-500 uppercase font-mono border-b border-slate-800 flex justify-between items-center">
              <span>{t.practice.yourCode} (Monaco Editor)</span>
              {showSolution && <span className="text-yellow-500 animate-pulse">Solution Mode</span>}
@@ -141,7 +133,7 @@ const CodePlayground: React.FC<{ item: CodePractice; t: TranslationStructure }> 
           
           <div className="flex-grow relative h-full w-full" dir="ltr">
             <Editor
-              key={showSolution ? "solution" : "user"} // Force re-mount when toggling to ensure value updates correctly
+              key={showSolution ? "solution" : "user"} 
               height="100%"
               defaultLanguage={item.language}
               language={item.language}
@@ -169,8 +161,8 @@ const CodePlayground: React.FC<{ item: CodePractice; t: TranslationStructure }> 
         </div>
 
         {/* Preview */}
-        <div className="flex flex-col bg-white relative">
-          <div className="bg-slate-200 p-2 text-xs text-slate-600 uppercase font-bold border-b border-slate-300 flex items-center justify-between">
+        <div className="flex flex-col bg-white relative border-t border-slate-200 lg:border-t-0">
+          <div className="bg-slate-100 p-2 text-xs text-slate-600 uppercase font-bold border-b border-slate-300 flex items-center justify-between">
             <span className="flex items-center">
               <Eye size={12} className="mr-1 rtl:mr-0 rtl:ml-1" />
               {t.practice.preview}
@@ -183,7 +175,7 @@ const CodePlayground: React.FC<{ item: CodePractice; t: TranslationStructure }> 
                     setIsRunning(false);
                 }, 400);
               }}
-              className="p-1 hover:bg-slate-300 rounded text-slate-700"
+              className="p-1 hover:bg-slate-200 rounded text-slate-700"
               title={t.practice.runCode}
             >
               <Play size={12} fill="currentColor" />
@@ -212,7 +204,7 @@ const CodePlayground: React.FC<{ item: CodePractice; t: TranslationStructure }> 
 };
 
 const LessonView: React.FC<LessonViewProps> = ({ 
-  t, lessonId, moduleTitle, onBack, lang, onComplete, isCompleted, nextLessonId, onNextLesson 
+  t, lessonId, moduleTitle, onBack, lang, onComplete, isCompleted, nextLessonId, onNextLesson, onStartChallenge
 }) => {
   const [input, setInput] = useState('');
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([]);
@@ -220,17 +212,14 @@ const LessonView: React.FC<LessonViewProps> = ({
   const [isAiVisible, setIsAiVisible] = useState(true);
   const [completedPracticeItems, setCompletedPracticeItems] = useState<string[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null); // For Chat
-  const mainContentRef = useRef<HTMLDivElement>(null); // For Main Lesson Content
+  const scrollRef = useRef<HTMLDivElement>(null); 
+  const mainContentRef = useRef<HTMLDivElement>(null); 
   const [justCompleted, setJustCompleted] = useState(false);
 
   const lessonData = getLessonContent(lessonId, lang);
   
-  // Calculate if all REQUIRED practice items (Quizzes) are done
   const quizzes = lessonData.practice?.filter(p => p.type === 'quiz') || [];
   const allQuizzesCompleted = quizzes.length === 0 || quizzes.every(q => completedPracticeItems.includes(q.id));
-  
-  // Can complete if already completed OR if quizzes are done
   const canMarkComplete = isCompleted || allQuizzesCompleted;
 
   const handleAskAi = async () => {
@@ -251,6 +240,16 @@ const LessonView: React.FC<LessonViewProps> = ({
     if (!canMarkComplete) return;
     onComplete();
     setJustCompleted(true);
+    
+    // Trigger confetti if this is the last lesson (no next lesson)
+    if (!nextLessonId) {
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#0ea5e9', '#a855f7', '#ec4899']
+        });
+    }
   };
 
   const handlePracticeSolved = (id: string) => {
@@ -259,25 +258,18 @@ const LessonView: React.FC<LessonViewProps> = ({
     }
   };
 
-  // TTS Handler
   const toggleSpeech = () => {
     if (isSpeaking) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
     } else {
-      // Clean text for better speech experience
       const textToRead = cleanMarkdownForSpeech(lessonData.content);
       const utterance = new SpeechSynthesisUtterance(textToRead);
       utterance.lang = lang === 'he' ? 'he-IL' : 'en-US';
       utterance.rate = 1;
       
-      utterance.onend = () => {
-        setIsSpeaking(false);
-      };
-
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-      };
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
 
       window.speechSynthesis.speak(utterance);
       setIsSpeaking(true);
@@ -290,18 +282,15 @@ const LessonView: React.FC<LessonViewProps> = ({
     }
   }, [chatHistory, isAiVisible]);
 
-  // Reset local state when lesson changes
   useEffect(() => {
     setJustCompleted(false);
-    setChatHistory([]); // Clear chat for new lesson
+    setChatHistory([]); 
     setInput('');
-    setCompletedPracticeItems([]); // Reset practice progress for new lesson
+    setCompletedPracticeItems([]); 
     
-    // Stop speaking if lesson changes
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
 
-    // Scroll to top of the main content
     if (mainContentRef.current) {
       mainContentRef.current.scrollTop = 0;
     }
@@ -315,7 +304,6 @@ const LessonView: React.FC<LessonViewProps> = ({
     const parts = content.split(/(```[\s\S]*?```)/g);
     return parts.map((part, index) => {
       if (part.startsWith('```')) {
-        // Code block
         const match = part.match(/```(\w*)\n?([\s\S]*?)```/);
         const code = match ? match[2] : part.replace(/```/g, '');
         return (
@@ -329,30 +317,29 @@ const LessonView: React.FC<LessonViewProps> = ({
           </div>
         );
       } else {
-        // Regular markdown lines
         return (
           <div key={index}>
             {part.split('\n').map((line, i) => {
                 const key = `${index}-${i}`;
                 if (!line.trim()) return <div key={key} className="h-2"></div>;
-                if (line.startsWith('# ')) return <h1 key={key} className="text-3xl md:text-5xl font-extrabold mt-12 mb-6 text-white pb-4 border-b border-slate-800 tracking-tight">{line.replace('# ', '')}</h1>;
-                if (line.startsWith('## ')) return <h2 key={key} className="text-2xl font-bold mt-10 mb-4 text-brand-300 flex items-center"><span className="w-2 h-8 bg-brand-500 rounded-full mr-3 rtl:mr-0 rtl:ml-3 inline-block"></span>{line.replace('## ', '')}</h2>;
-                if (line.startsWith('### ')) return <h3 key={key} className="text-xl font-bold mt-6 mb-3 text-white">{line.replace('### ', '')}</h3>;
+                if (line.startsWith('# ')) return <h1 key={key} className="text-3xl md:text-5xl font-extrabold mt-12 mb-6 text-slate-900 dark:text-white pb-4 border-b border-slate-200 dark:border-slate-800 tracking-tight">{line.replace('# ', '')}</h1>;
+                if (line.startsWith('## ')) return <h2 key={key} className="text-2xl font-bold mt-10 mb-4 text-brand-600 dark:text-brand-300 flex items-center"><span className="w-2 h-8 bg-brand-500 rounded-full mr-3 rtl:mr-0 rtl:ml-3 inline-block"></span>{line.replace('## ', '')}</h2>;
+                if (line.startsWith('### ')) return <h3 key={key} className="text-xl font-bold mt-6 mb-3 text-slate-800 dark:text-white">{line.replace('### ', '')}</h3>;
                 if (line.trim().startsWith('> ')) {
                    return (
-                     <div key={key} className="my-6 p-4 bg-brand-900/10 border-l-4 border-brand-500 rounded-r-lg flex items-start">
-                        <Lightbulb className="text-brand-400 mr-3 rtl:mr-0 rtl:ml-3 shrink-0 mt-1" size={24} />
-                        <div className="text-brand-100 italic">
+                     <div key={key} className="my-6 p-4 bg-brand-50 dark:bg-brand-900/10 border-l-4 border-brand-500 rounded-r-lg flex items-start">
+                        <Lightbulb className="text-brand-500 dark:text-brand-400 mr-3 rtl:mr-0 rtl:ml-3 shrink-0 mt-1" size={24} />
+                        <div className="text-brand-900 dark:text-brand-100 italic">
                              {renderInlineMarkdown(line.replace('> ', ''))}
                         </div>
                      </div>
                    )
                 }
-                if (line.trim().startsWith('- ')) return <li key={key} className="ml-5 rtl:mr-5 mb-2 list-disc text-slate-300 pl-2 rtl:pr-2 marker:text-brand-500 text-lg">{renderInlineMarkdown(line.replace(/^- /, ''))}</li>;
-                if (line.trim().match(/^\d+\. /)) return <li key={key} className="ml-5 rtl:mr-5 mb-2 list-decimal text-slate-300 pl-2 rtl:pr-2 marker:text-brand-500 marker:font-bold text-lg">{renderInlineMarkdown(line.replace(/^\d+\. /, ''))}</li>;
+                if (line.trim().startsWith('- ')) return <li key={key} className="ml-5 rtl:mr-5 mb-2 list-disc text-slate-600 dark:text-slate-300 pl-2 rtl:pr-2 marker:text-brand-500 text-lg">{renderInlineMarkdown(line.replace(/^- /, ''))}</li>;
+                if (line.trim().match(/^\d+\. /)) return <li key={key} className="ml-5 rtl:mr-5 mb-2 list-decimal text-slate-600 dark:text-slate-300 pl-2 rtl:pr-2 marker:text-brand-500 marker:font-bold text-lg">{renderInlineMarkdown(line.replace(/^\d+\. /, ''))}</li>;
                 
                 return (
-                  <p key={key} className="mb-4 text-slate-300 leading-relaxed text-lg">
+                  <p key={key} className="mb-4 text-slate-600 dark:text-slate-300 leading-relaxed text-lg">
                     {renderInlineMarkdown(line)}
                   </p>
                 );
@@ -364,37 +351,34 @@ const LessonView: React.FC<LessonViewProps> = ({
   };
 
   const renderInlineMarkdown = (text: string) => {
-    // Parser for bold and inline code
     const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
     return parts.map((p, pi) => {
-        if (p.startsWith('**') && p.endsWith('**')) return <strong key={pi} className="text-white font-semibold">{p.slice(2, -2)}</strong>;
-        // Enhanced inline code styling
-        if (p.startsWith('`') && p.endsWith('`')) return <code key={pi} className="bg-slate-800/80 px-1.5 py-0.5 rounded-md text-brand-300 font-mono text-sm border border-slate-700/50 mx-1 shadow-sm" dir="ltr">{p.slice(1, -1)}</code>;
+        if (p.startsWith('**') && p.endsWith('**')) return <strong key={pi} className="text-slate-900 dark:text-white font-semibold">{p.slice(2, -2)}</strong>;
+        if (p.startsWith('`') && p.endsWith('`')) return <code key={pi} className="bg-slate-200 dark:bg-slate-800/80 px-1.5 py-0.5 rounded-md text-brand-700 dark:text-brand-300 font-mono text-sm border border-slate-300 dark:border-slate-700/50 mx-1 shadow-sm" dir="ltr">{p.slice(1, -1)}</code>;
         return p;
     });
   };
 
   return (
-    <div className="pt-20 h-screen flex flex-col md:flex-row overflow-hidden bg-dark-bg relative">
+    <div className="pt-20 h-screen flex flex-col md:flex-row overflow-hidden bg-slate-50 dark:bg-dark-bg relative transition-colors duration-300">
       
       {/* Left Panel: Content */}
       <div 
         ref={mainContentRef}
-        className={`h-full overflow-y-auto p-6 md:p-12 border-r border-slate-800 custom-scrollbar transition-all duration-300 ${isAiVisible ? 'w-full md:w-2/3' : 'w-full'}`}
+        className={`h-full overflow-y-auto p-6 md:p-12 border-r border-slate-200 dark:border-slate-800 custom-scrollbar transition-all duration-300 ${isAiVisible ? 'w-full md:w-2/3' : 'w-full'}`}
       >
         <div className="flex justify-between items-center mb-8">
             <button 
                 onClick={onBack}
-                className="flex items-center text-slate-400 hover:text-white transition-colors group"
+                className="flex items-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors group"
             >
                 <ArrowLeft size={20} className="mr-2 rtl:ml-2 rtl:mr-0 rtl:rotate-180 group-hover:-translate-x-1 transition-transform" />
                 {t.lesson.backToCurriculum}
             </button>
 
-            {/* Read Aloud Button */}
             <button
                 onClick={toggleSpeech}
-                className={`flex items-center px-4 py-2 rounded-full font-medium transition-all duration-300 ${isSpeaking ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'}`}
+                className={`flex items-center px-4 py-2 rounded-full font-medium transition-all duration-300 ${isSpeaking ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-700'}`}
             >
                 {isSpeaking ? (
                     <>
@@ -415,23 +399,23 @@ const LessonView: React.FC<LessonViewProps> = ({
             </button>
         </div>
 
-        <div className="mb-4 text-brand-400 text-sm font-bold uppercase tracking-wider flex items-center">
+        <div className="mb-4 text-brand-600 dark:text-brand-400 text-sm font-bold uppercase tracking-wider flex items-center">
              <span className="w-2 h-2 bg-brand-500 rounded-full mr-2 rtl:mr-0 rtl:ml-2 animate-pulse"></span>
             {moduleTitle}
         </div>
-        <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-10 tracking-tight leading-tight">
+        <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 dark:text-white mb-10 tracking-tight leading-tight">
             {lessonData.title}
         </h1>
 
-        <div className="prose prose-invert prose-lg max-w-none">
+        <div className="prose prose-slate dark:prose-invert prose-lg max-w-none">
             {renderMarkdown(lessonData.content)}
         </div>
 
         {/* Practice Zone */}
         {lessonData.practice && lessonData.practice.length > 0 && (
-          <div className="mt-16 pt-8 border-t border-slate-800">
+          <div className="mt-16 pt-8 border-t border-slate-200 dark:border-slate-800">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-              <h2 className="text-2xl font-bold text-white flex items-center">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center">
                 <Code className="text-brand-500 mr-2 rtl:mr-0 rtl:ml-2" />
                 {t.practice.title}
               </h2>
@@ -454,16 +438,16 @@ const LessonView: React.FC<LessonViewProps> = ({
           </div>
         )}
 
-        <div className="mt-12 mb-20 flex flex-col sm:flex-row items-center justify-between border-t border-slate-800 pt-10 gap-6">
+        <div className="mt-12 mb-20 flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-10 gap-6">
             <div className="flex items-center">
               {isCompleted ? (
-                <div className="flex items-center text-green-400 font-medium bg-green-900/20 px-4 py-2 rounded-full border border-green-900/50">
+                <div className="flex items-center text-green-600 dark:text-green-400 font-medium bg-green-100 dark:bg-green-900/20 px-4 py-2 rounded-full border border-green-500/20">
                    <CheckCircle size={20} className="mr-2 rtl:ml-2 rtl:mr-0" />
                    {t.lesson.completed}
                 </div>
               ) : (
-                 <span className={`italic flex items-center ${canMarkComplete ? 'text-slate-500' : 'text-amber-500/80'}`}>
-                    <span className={`w-2 h-2 rounded-full mr-2 rtl:mr-0 rtl:ml-2 ${canMarkComplete ? 'bg-slate-600' : 'bg-amber-500'}`}></span>
+                 <span className={`italic flex items-center ${canMarkComplete ? 'text-slate-500 dark:text-slate-500' : 'text-amber-600/80 dark:text-amber-500/80'}`}>
+                    <span className={`w-2 h-2 rounded-full mr-2 rtl:mr-0 rtl:ml-2 ${canMarkComplete ? 'bg-slate-400 dark:bg-slate-600' : 'bg-amber-500'}`}></span>
                     {canMarkComplete ? t.lesson.markComplete : t.lesson.requirementsNotMet}
                  </span>
               )}
@@ -475,26 +459,31 @@ const LessonView: React.FC<LessonViewProps> = ({
                     onClick={handleComplete}
                     disabled={!canMarkComplete}
                     className={`
-                        flex-1 sm:flex-none flex items-center justify-center px-8 py-3 rounded-full font-bold transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]
+                        flex-1 sm:flex-none flex items-center justify-center px-8 py-3 rounded-full font-bold transition-all shadow-lg
                         ${canMarkComplete 
-                            ? 'bg-slate-100 text-slate-900 hover:bg-white hover:scale-105 cursor-pointer' 
-                            : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'}
+                            ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-105 cursor-pointer shadow-slate-500/20' 
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-50'}
                     `}
                 >
                     <CheckCircle size={20} className="mr-2 rtl:ml-2 rtl:mr-0" />
                     {t.lesson.markCompleteAction}
                 </button>
               ) : (
-                 nextLessonId && (
+                 nextLessonId ? (
                    <button 
                       onClick={() => onNextLesson(nextLessonId)}
-                      className={`
-                        flex-1 sm:flex-none flex items-center justify-center px-8 py-3 bg-brand-600 hover:bg-brand-500 text-white rounded-full font-bold transition-all hover:scale-105 shadow-lg shadow-brand-500/20
-                        ${justCompleted ? 'animate-bounce' : ''}
-                      `}
+                      className="flex-1 sm:flex-none flex items-center justify-center px-8 py-3 bg-brand-600 hover:bg-brand-500 text-white rounded-full font-bold transition-all hover:scale-105 shadow-lg shadow-brand-500/20"
                    >
                       {t.lesson.nextLesson}
                       <ArrowRight size={20} className="ml-2 rtl:mr-2 rtl:ml-0 rtl:rotate-180" />
+                   </button>
+                 ) : (
+                   <button 
+                      onClick={onStartChallenge}
+                      className="flex-1 sm:flex-none flex items-center justify-center px-8 py-3 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-400 hover:to-orange-500 text-white rounded-full font-bold transition-all hover:scale-105 shadow-lg shadow-yellow-500/30 animate-pulse"
+                   >
+                      <Trophy size={20} className="mr-2 rtl:ml-2 rtl:mr-0" />
+                      {t.lesson.finalChallenge}
                    </button>
                  )
               )}
@@ -502,7 +491,7 @@ const LessonView: React.FC<LessonViewProps> = ({
         </div>
       </div>
 
-      {/* Floating Button to Open AI (Visible only when AI is closed) */}
+      {/* Floating Button to Open AI */}
       {!isAiVisible && (
         <button 
           onClick={() => setIsAiVisible(true)}
@@ -516,15 +505,15 @@ const LessonView: React.FC<LessonViewProps> = ({
 
       {/* Right Panel: AI Tutor */}
       {isAiVisible && (
-          <div className="w-full md:w-1/3 h-[40vh] md:h-full bg-slate-900 border-t md:border-t-0 md:border-l border-slate-800 flex flex-col shadow-2xl z-10 transition-all duration-300">
-            <div className="p-4 border-b border-slate-800 bg-slate-800/50 flex items-center justify-between backdrop-blur-md">
+          <div className="w-full md:w-1/3 h-[40vh] md:h-full bg-white dark:bg-slate-900 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl z-10 transition-all duration-300">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between backdrop-blur-md">
                 <div className="flex items-center">
                     <div className="p-2 bg-gradient-to-tr from-brand-500 to-purple-600 rounded-lg text-white mr-3 rtl:mr-0 rtl:ml-3 shadow-lg">
                         <Bot size={24} />
                     </div>
                     <div>
-                        <h3 className="font-bold text-white">{t.lesson.aiTutorTitle}</h3>
-                        <p className="text-xs text-slate-400 flex items-center">
+                        <h3 className="font-bold text-slate-900 dark:text-white">{t.lesson.aiTutorTitle}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center">
                         <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 rtl:mr-0 rtl:ml-1.5 animate-pulse"></span>
                         Online
                         </p>
@@ -532,7 +521,7 @@ const LessonView: React.FC<LessonViewProps> = ({
                 </div>
                 <button 
                     onClick={() => setIsAiVisible(false)}
-                    className="p-2 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors"
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                 >
                     <X size={20} />
                 </button>
@@ -540,8 +529,8 @@ const LessonView: React.FC<LessonViewProps> = ({
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={scrollRef}>
                 {chatHistory.length === 0 && (
-                    <div className="text-center text-slate-500 mt-10 p-6">
-                        <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-700">
+                    <div className="text-center text-slate-500 dark:text-slate-500 mt-10 p-6">
+                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-slate-700">
                         <Bot size={32} className="opacity-50" />
                         </div>
                         <p className="text-sm">{t.lesson.aiTutorPlaceholder}</p>
@@ -552,7 +541,7 @@ const LessonView: React.FC<LessonViewProps> = ({
                         <div className={`max-w-[85%] rounded-2xl p-3 text-sm shadow-md leading-relaxed ${
                             msg.role === 'user' 
                             ? 'bg-brand-600 text-white rounded-br-none rtl:rounded-bl-none rtl:rounded-br-2xl' 
-                            : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-bl-none rtl:rounded-br-none rtl:rounded-bl-2xl'
+                            : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none rtl:rounded-br-none rtl:rounded-bl-2xl'
                         }`}>
                             {msg.text}
                         </div>
@@ -560,15 +549,15 @@ const LessonView: React.FC<LessonViewProps> = ({
                 ))}
                 {isLoadingAi && (
                     <div className="flex justify-start">
-                        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-3 flex items-center space-x-2">
+                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 flex items-center space-x-2">
                             <RefreshCw size={16} className="animate-spin text-brand-400" />
-                            <span className="text-xs text-slate-400">{t.lesson.loading}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">{t.lesson.loading}</span>
                         </div>
                     </div>
                 )}
             </div>
 
-            <div className="p-4 border-t border-slate-800 bg-slate-900">
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
                 <div className="relative">
                     <input
                         type="text"
@@ -576,7 +565,7 @@ const LessonView: React.FC<LessonViewProps> = ({
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleAskAi()}
                         placeholder={t.lesson.aiTutorPlaceholder}
-                        className="w-full bg-slate-800 text-white rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500/50 border border-slate-700 placeholder-slate-500 rtl:pr-4 rtl:pl-12 transition-all"
+                        className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500/50 border border-slate-200 dark:border-slate-700 placeholder-slate-400 dark:placeholder-slate-500 rtl:pr-4 rtl:pl-12 transition-all"
                     />
                     <button 
                         onClick={handleAskAi}

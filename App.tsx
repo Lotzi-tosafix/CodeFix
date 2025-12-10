@@ -6,8 +6,9 @@ import ModuleView from './components/ModuleView';
 import LessonView from './components/LessonView';
 import About from './components/About';
 import ProfileModal from './components/ProfileModal';
+import ChallengeView from './components/ChallengeView';
 import { en, he } from './locales';
-import { Language, ViewState, Module, User } from './types';
+import { Language, ViewState, Module, User, Theme } from './types';
 import { getCourseData } from './data';
 import { AlertTriangle } from 'lucide-react';
 
@@ -17,13 +18,27 @@ function App() {
   const [activeModule, setActiveModule] = useState<Module | null>(null);
   const [currentLesson, setCurrentLesson] = useState<{id: string, moduleTitle: string} | null>(null);
   
+  // Theme State with Lazy Initialization for Persistence
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window !== 'undefined') {
+        const savedTheme = localStorage.getItem('codefix_theme') as Theme;
+        if (savedTheme) {
+            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+            return savedTheme;
+        }
+    }
+    // Default to dark
+    document.documentElement.classList.add('dark');
+    return 'dark';
+  });
+
   // Auth State
   const [user, setUser] = useState<User | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [showGuestWarning, setShowGuestWarning] = useState(true);
 
-  // Initialize language from browser or localStorage
+  // Initialize language
   useEffect(() => {
     const savedLang = localStorage.getItem('codefix_lang') as Language;
     if (savedLang) {
@@ -41,7 +56,6 @@ function App() {
         loadUserProgress(parsedUser.email);
         setShowGuestWarning(false);
     } else {
-        // Guest mode: Reset progress (don't load from local storage persistence unless it's session)
         setCompletedLessons([]);
     }
   }, []);
@@ -52,6 +66,16 @@ function App() {
     document.dir = lang === 'he' ? 'rtl' : 'ltr';
     document.documentElement.lang = lang;
   }, [lang]);
+
+  // Save Theme preference
+  useEffect(() => {
+      localStorage.setItem('codefix_theme', theme);
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
+
+  const toggleTheme = () => {
+      setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   const t = lang === 'he' ? he : en;
   const courseData = getCourseData(t, lang);
@@ -81,7 +105,8 @@ function App() {
           id: 'u_' + Date.now(),
           name: 'Israel Israeli',
           email: 'israel@gmail.com',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
+          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+          isAdmin: false
       };
       
       setUser(mockUser);
@@ -90,9 +115,6 @@ function App() {
       // Load progress from "DB"
       loadUserProgress(mockUser.email);
       setShowGuestWarning(false);
-      
-      // Merge guest progress if needed? For now, we'll just switch context.
-      // Ideally, we might ask to merge, but let's stick to switching.
   };
 
   const handleLogout = () => {
@@ -103,6 +125,13 @@ function App() {
       setShowGuestWarning(true);
       setIsProfileOpen(false);
       setView('home');
+  };
+
+  const handleToggleAdmin = () => {
+      if (!user) return;
+      const updatedUser = { ...user, isAdmin: !user.isAdmin };
+      setUser(updatedUser);
+      localStorage.setItem('codefix_current_user', JSON.stringify(updatedUser));
   };
 
   // Navigation Handlers
@@ -116,6 +145,11 @@ function App() {
     if (!activeModule) return;
     setCurrentLesson({ id, moduleTitle: t.curriculum.modules[activeModule.titleKey] });
     setView('lesson');
+  };
+
+  const handleStartChallenge = () => {
+      if (!activeModule) return;
+      setView('challenge');
   };
 
   const handleBackToRoadmap = () => {
@@ -139,6 +173,11 @@ function App() {
       }
       // If Guest: It stays in memory (state) only.
     }
+  };
+
+  const handleChallengeComplete = () => {
+      // Mark module complete in a real app, for now just go back
+      setView('module');
   };
 
   // Profile Management
@@ -170,10 +209,10 @@ function App() {
   const nextLessonId = currentLesson ? getNextLessonId(currentLesson.id) : null;
 
   return (
-    <div className={`min-h-screen bg-dark-bg text-slate-50 selection:bg-brand-500 selection:text-white ${lang === 'he' ? 'rtl' : 'ltr'}`}>
+    <div className={`min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-50 selection:bg-brand-500 selection:text-white ${lang === 'he' ? 'rtl' : 'ltr'} transition-colors duration-300`}>
       
       {/* Warning for Guests */}
-      {!user && showGuestWarning && view !== 'lesson' && (
+      {!user && showGuestWarning && view !== 'lesson' && view !== 'challenge' && (
           <div className="fixed bottom-0 left-0 w-full z-40 bg-amber-600/90 backdrop-blur-md text-white p-3 flex items-center justify-center shadow-[0_-4px_20px_rgba(0,0,0,0.3)] animate-fade-in-up">
               <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-3 text-center md:text-start px-4">
                   <AlertTriangle className="animate-pulse flex-shrink-0" />
@@ -206,13 +245,16 @@ function App() {
               completedLessons={completedLessons}
               onDeleteLesson={handleDeleteLesson}
               onResetProgress={handleResetProgress}
+              onToggleAdmin={handleToggleAdmin}
           />
       )}
 
-      {view !== 'lesson' && (
+      {view !== 'lesson' && view !== 'challenge' && (
         <Navbar 
             lang={lang} 
-            setLang={setLang} 
+            setLang={setLang}
+            theme={theme}
+            toggleTheme={toggleTheme} 
             t={t} 
             setView={setView} 
             currentView={view}
@@ -231,6 +273,7 @@ function App() {
               onSelectModule={handleSelectModule} 
               completedLessons={completedLessons}
               courseData={courseData}
+              user={user}
             />
         )}
         
@@ -245,6 +288,7 @@ function App() {
               completedLessons={completedLessons}
               onBack={handleBackToRoadmap}
               onSelectLesson={handleLessonSelect}
+              user={user}
             />
         )}
 
@@ -259,12 +303,22 @@ function App() {
                 isCompleted={completedLessons.includes(currentLesson.id)}
                 nextLessonId={nextLessonId}
                 onNextLesson={handleLessonSelect}
+                onStartChallenge={handleStartChallenge}
+            />
+        )}
+
+        {view === 'challenge' && activeModule && activeModule.finalChallenge && (
+            <ChallengeView
+                t={t}
+                challenge={activeModule.finalChallenge}
+                onBack={handleBackToModule}
+                onComplete={handleChallengeComplete}
             />
         )}
       </main>
 
-      {view !== 'lesson' && (
-        <footer className={`py-8 text-center text-slate-600 text-sm border-t border-slate-800 bg-dark-bg ${!user && showGuestWarning ? 'mb-20' : ''}`}>
+      {view !== 'lesson' && view !== 'challenge' && (
+        <footer className={`py-8 text-center text-slate-600 dark:text-slate-400 text-sm border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0f172a] ${!user && showGuestWarning ? 'mb-20' : ''}`}>
             <p>&copy; {new Date().getFullYear()} CodeFix. Built with React & Tailwind.</p>
         </footer>
       )}

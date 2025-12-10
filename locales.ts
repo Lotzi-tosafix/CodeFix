@@ -25,7 +25,9 @@ export const en: TranslationStructure = {
     resetAll: "Reset Entire Course",
     resetConfirm: "Are you sure? This cannot be undone.",
     noProgress: "You haven't completed any lessons yet.",
-    hello: "Hello"
+    hello: "Hello",
+    adminMode: "Developer Mode",
+    adminModeDesc: "Unlock all content for testing"
   },
   hero: {
     titlePrefix: "Master Web Dev",
@@ -85,6 +87,7 @@ export const en: TranslationStructure = {
     aiTutorButton: "Ask AI",
     backToCurriculum: "Back to Module",
     nextLesson: "Next Lesson",
+    finalChallenge: "Final Challenge 🏆",
     completed: "Lesson Completed!",
     markComplete: "Read carefully and complete tasks",
     markCompleteAction: "Mark Complete",
@@ -93,6 +96,15 @@ export const en: TranslationStructure = {
     openAi: "Open AI Tutor",
     readAloud: "Read Lesson",
     stopReading: "Stop Reading"
+  },
+  challenge: {
+    title: "Final Challenge",
+    description: "Prove your skills! Build the following using everything you've learned.",
+    task: "Mission Brief",
+    runTests: "Submit & Verify",
+    success: "Mission Accomplished! You are amazing! 🎉",
+    failure: "Not quite there. Check the requirements and try again.",
+    backToModule: "Finish Module"
   },
   practice: {
     title: "Practice Zone",
@@ -133,7 +145,9 @@ export const he: TranslationStructure = {
     resetAll: "אפס את כל הקורס",
     resetConfirm: "האם אתה בטוח? פעולה זו לא ניתנת לביטול.",
     noProgress: "טרם השלמת שיעורים. זה הזמן להתחיל!",
-    hello: "שלום"
+    hello: "שלום",
+    adminMode: "מצב מפתח (God Mode)",
+    adminModeDesc: "פתח את כל התוכן לבדיקה"
   },
   hero: {
     titlePrefix: "הופכים למאסטרים ב-Web",
@@ -193,6 +207,7 @@ export const he: TranslationStructure = {
     aiTutorButton: "שלח שאלה",
     backToCurriculum: "חזרה לרשימת השיעורים",
     nextLesson: "לשיעור הבא",
+    finalChallenge: "אתגר הסיום 🏆",
     completed: "סיימתי את השיעור!",
     markComplete: "קרא בעיון וסיים את המטלות",
     markCompleteAction: "סמן כהושלם",
@@ -201,6 +216,15 @@ export const he: TranslationStructure = {
     openAi: "פתח צ'אט AI",
     readAloud: "הקרא שיעור",
     stopReading: "עצור הקראה"
+  },
+  challenge: {
+    title: "אתגר הסיום",
+    description: "זה הזמן להוכיח שלמדתם! בנו את המבנה הבא באמצעות כל התגיות שלמדתם.",
+    task: "משימה לביצוע",
+    runTests: "הגש ובדוק",
+    success: "משימה הושלמה! אתה פשוט אלוף! 🎉",
+    failure: "עדיין לא שם. בדוק את הדרישות ונסה שוב.",
+    backToModule: "סיים מודול בהצלחה"
   },
   practice: {
     title: "המעבדה - אזור תרגול",
