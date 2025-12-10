@@ -42,3 +42,31 @@ export const askAiTutor = async (
     return "I'm having trouble connecting to the brain right now. Please try again later.";
   }
 };
+
+export const generateLessonAudio = async (text: string, language: 'en' | 'he'): Promise<string | null> => {
+  const client = getClient();
+  if (!client) return null;
+
+  try {
+    // We request the model to read the text.
+    // Note: 'Kore' is a good general purpose voice.
+    const response = await client.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: text }] }],
+      config: {
+        responseModalities: ["AUDIO"],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Kore' },
+          },
+        },
+      },
+    });
+
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    return base64Audio || null;
+  } catch (error) {
+    console.error("Gemini TTS Error:", error);
+    return null;
+  }
+};
