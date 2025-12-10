@@ -12,6 +12,10 @@ import { Language, ViewState, Module, User, Theme } from './types';
 import { getCourseData } from './data';
 import { AlertTriangle } from 'lucide-react';
 
+// Firebase Imports
+import { auth, googleProvider, saveUserData, getUserData } from './services/firebase';
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+
 function App() {
   // Language State with Lazy Initialization
   const [lang, setLang] = useState<Language>(() => {
@@ -47,37 +51,35 @@ function App() {
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [showGuestWarning, setShowGuestWarning] = useState(true);
 
-  // --- Helpers defined before effects ---
-
-  const loadUserProgress = (email: string) => {
-      // Simulate fetching from DB
-      const dbData = localStorage.getItem(`codefix_db_progress_${email}`);
-      if (dbData) {
-          try {
-              setCompletedLessons(JSON.parse(dbData));
-          } catch (e) { console.error(e); }
-      } else {
-          setCompletedLessons([]);
-      }
-  };
-
-  const saveUserProgress = (email: string, progress: string[]) => {
-      // Simulate saving to DB
-      localStorage.setItem(`codefix_db_progress_${email}`, JSON.stringify(progress));
-  };
-
-  // Initialize Session
+  // Initialize Firebase Auth Listener
   useEffect(() => {
-    // Check if there is a previously logged in user (Mock Session)
-    const storedUser = localStorage.getItem('codefix_current_user');
-    if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        loadUserProgress(parsedUser.email);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // User logged in
+        const newUser: User = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || 'User',
+          email: firebaseUser.email || '',
+          avatar: firebaseUser.photoURL || '',
+          isAdmin: false // Keeps admin strictly local for this implementation
+        };
+        
+        setUser(newUser);
         setShowGuestWarning(false);
-    } else {
+
+        // Fetch progress from Firestore
+        const cloudProgress = await getUserData(firebaseUser.uid);
+        setCompletedLessons(cloudProgress);
+        
+      } else {
+        // User logged out
+        setUser(null);
         setCompletedLessons([]);
-    }
+        setShowGuestWarning(true);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Sync language to DOM
@@ -100,39 +102,30 @@ function App() {
   const t = lang === 'he' ? he : en;
   const courseData = getCourseData(t, lang);
 
-  const handleLogin = () => {
-      // MOCK Google Login
-      const mockUser: User = {
-          id: 'u_' + Date.now(),
-          name: 'Israel Israeli',
-          email: 'israel@gmail.com',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
-          isAdmin: false
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('codefix_current_user', JSON.stringify(mockUser));
-      
-      // Load progress from "DB"
-      loadUserProgress(mockUser.email);
-      setShowGuestWarning(false);
+  const handleLogin = async () => {
+      try {
+        await signInWithPopup(auth, googleProvider);
+        // State updates via onAuthStateChanged hook
+      } catch (error) {
+        console.error("Login failed:", error);
+      }
   };
 
-  const handleLogout = () => {
-      setUser(null);
-      localStorage.removeItem('codefix_current_user');
-      // Clear local state (Guest mode starts empty)
-      setCompletedLessons([]); 
-      setShowGuestWarning(true);
-      setIsProfileOpen(false);
-      setView('home');
+  const handleLogout = async () => {
+      try {
+        await signOut(auth);
+        setIsProfileOpen(false);
+        setView('home');
+      } catch (error) {
+        console.error("Logout failed:", error);
+      }
   };
 
   const handleToggleAdmin = () => {
       if (!user) return;
+      // Admin state is kept local for now
       const updatedUser = { ...user, isAdmin: !user.isAdmin };
       setUser(updatedUser);
-      localStorage.setItem('codefix_current_user', JSON.stringify(updatedUser));
   };
 
   // Navigation Handlers
@@ -168,15 +161,15 @@ function App() {
       const newCompleted = [...completedLessons, lessonId];
       setCompletedLessons(newCompleted);
       
-      // If User: Save to persistent DB simulation
+      // Save to Firestore if user is logged in
       if (user) {
-          saveUserProgress(user.email, newCompleted);
+          saveUserData(user.id, newCompleted);
       }
     }
   };
 
   const handleChallengeComplete = () => {
-      // Mark module complete in a real app, for now just go back
+      // Mark module complete logic here (in future)
       setView('module');
   };
 
@@ -186,14 +179,14 @@ function App() {
       const newCompleted = completedLessons.filter(id => id !== lessonId);
       setCompletedLessons(newCompleted);
       if (user) {
-          saveUserProgress(user.email, newCompleted);
+          saveUserData(user.id, newCompleted);
       }
   };
 
   const handleResetProgress = () => {
       setCompletedLessons([]);
       if (user) {
-          saveUserProgress(user.email, []);
+          saveUserData(user.id, []);
       }
   };
 

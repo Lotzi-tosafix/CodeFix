@@ -15,7 +15,7 @@
     "lucide-react": "^0.556.0",
     "@monaco-editor/react": "^4.6.0",
     "canvas-confetti": "latest",
-    "firebase": "^10.8.0" 
+    "firebase": "^12.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
