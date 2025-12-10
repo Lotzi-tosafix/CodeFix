@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TranslationStructure, Language, PracticeItem, QuizPractice, CodePractice } from '../types';
 import { ArrowLeft, CheckCircle, Send, Bot, RefreshCw, ArrowRight, Play, Eye, Code, HelpCircle, X, MessageCircle, Loader2, Lightbulb, PlayCircle, Volume2, Square, Trophy } from 'lucide-react';
-import { askAiTutor, generateLessonAudio } from '../services/geminiService';
+import { askAiTutor } from '../services/geminiService';
 import { getLessonContent } from '../data';
 import Editor from "@monaco-editor/react";
 import confetti from 'canvas-confetti';
@@ -17,51 +17,6 @@ interface LessonViewProps {
   nextLessonId: string | null;
   onNextLesson: (id: string) => void;
   onStartChallenge: () => void;
-}
-
-// Helper: Decode base64 string to byte array
-function decode(base64: string) {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-}
-
-// Helper: Decode audio data for AudioContext
-async function decodeAudioData(
-  data: Uint8Array,
-  ctx: AudioContext,
-  sampleRate: number,
-  numChannels: number,
-): Promise<AudioBuffer> {
-  // Try using native decode first if possible (some browsers might support it for raw PCM if framed correctly, 
-  // but Gemini sends raw PCM usually. The instruction suggests manual decoding or native if header exists. 
-  // Since we get raw PCM usually from Live API but TTS might return WAV container in some versions, 
-  // let's try strict PCM decoding logic as per Gemini docs if native fails, or use standard context decode.)
-  
-  // Actually, for the TTS endpoint, it often returns a container format or raw. 
-  // Let's implement the standard Web Audio decode which handles most headers automatically.
-  // If it fails, we fall back to raw PCM assumption.
-  try {
-     return await ctx.decodeAudioData(data.buffer.slice(0));
-  } catch (e) {
-      // Fallback manual PCM decoding if raw float32/int16 is sent without header
-      // Assuming 24kHz usually for Gemini
-      const dataInt16 = new Int16Array(data.buffer);
-      const frameCount = dataInt16.length / numChannels;
-      const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-
-      for (let channel = 0; channel < numChannels; channel++) {
-        const channelData = buffer.getChannelData(channel);
-        for (let i = 0; i < frameCount; i++) {
-          channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-        }
-      }
-      return buffer;
-  }
 }
 
 const cleanMarkdownForSpeech = (markdown: string): string => {
@@ -260,8 +215,8 @@ const LessonView: React.FC<LessonViewProps> = ({
   // Audio State
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  // Replaced AudioContext with a simple HTMLAudioElement ref for MP3 playback
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null); 
   const mainContentRef = useRef<HTMLDivElement>(null); 
@@ -310,11 +265,9 @@ const LessonView: React.FC<LessonViewProps> = ({
   };
 
   const stopAudio = () => {
-      if (audioSourceRef.current) {
-          try {
-              audioSourceRef.current.stop();
-          } catch (e) { /* ignore if already stopped */ }
-          audioSourceRef.current = null;
+      if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0; // Reset
       }
       setIsSpeaking(false);
   };
@@ -326,36 +279,34 @@ const LessonView: React.FC<LessonViewProps> = ({
       setIsLoadingAudio(true);
       const textToRead = cleanMarkdownForSpeech(lessonData.content);
       
-      const base64Audio = await generateLessonAudio(textToRead, lang);
-      
-      if (!base64Audio) {
-          setIsLoadingAudio(false);
-          alert("Could not generate audio at this time.");
-          return;
-      }
-
       try {
-          if (!audioContextRef.current) {
-              audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 24000});
+          // Select voice based on language
+          // he-IL-AvriNeural is a great male voice for Hebrew
+          // en-US-BrianNeural is a great voice for English
+          const voice = lang === 'he' ? 'he-IL-AvriNeural' : 'en-US-BrianNeural';
+          const encodedText = encodeURIComponent(textToRead);
+          
+          // Use our new Vercel API endpoint
+          const audioUrl = `/api/tts?text=${encodedText}&voice=${voice}`;
+          
+          if (audioRef.current) {
+              audioRef.current.pause();
           }
-          const ctx = audioContextRef.current;
           
-          // Decode audio
-          const audioBytes = decode(base64Audio);
-          const audioBuffer = await decodeAudioData(audioBytes, ctx, 24000, 1);
-          
-          // Play audio
-          const source = ctx.createBufferSource();
-          source.buffer = audioBuffer;
-          source.connect(ctx.destination);
-          
-          source.onended = () => {
+          const audio = new Audio(audioUrl);
+          audioRef.current = audio;
+
+          audio.onended = () => {
               setIsSpeaking(false);
-              audioSourceRef.current = null;
           };
 
-          source.start(0);
-          audioSourceRef.current = source;
+          audio.onerror = (e) => {
+              console.error("Audio Error", e);
+              setIsSpeaking(false);
+              alert(lang === 'he' ? "שגיאה בטעינת האודיו" : "Error loading audio");
+          };
+
+          await audio.play();
           setIsSpeaking(true);
 
       } catch (error) {
@@ -387,9 +338,10 @@ const LessonView: React.FC<LessonViewProps> = ({
     
     return () => {
        stopAudio();
-       if (audioContextRef.current) {
-           audioContextRef.current.close();
-           audioContextRef.current = null;
+       // Clean up audio object
+       if (audioRef.current) {
+           audioRef.current.pause();
+           audioRef.current = null;
        }
     };
   }, [lessonId]);
@@ -478,7 +430,7 @@ const LessonView: React.FC<LessonViewProps> = ({
                 {isLoadingAudio ? (
                     <>
                         <Loader2 size={18} className="mr-2 rtl:ml-2 rtl:mr-0 animate-spin" />
-                        Generating Audio...
+                        Loading Audio...
                     </>
                 ) : isSpeaking ? (
                     <>
