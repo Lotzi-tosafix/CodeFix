@@ -30,7 +30,7 @@ const cleanMarkdownForSpeech = (markdown: string): string => {
     .replace(/>\s?/g, '')
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, 'Image: $1')
     .replace(/^(\s*-\s|\s*\d+\.\s)/gm, '')
-    .replace(/\n+/g, '. ');
+    .replace(/\n+/g, '\n'); // Keep newlines for splitting
 };
 
 const QuizComponent: React.FC<{ item: QuizPractice; t: TranslationStructure; onSolved: (id: string) => void }> = ({ item, t, onSolved }) => {
@@ -212,10 +212,11 @@ const LessonView: React.FC<LessonViewProps> = ({
   const [isAiVisible, setIsAiVisible] = useState(true);
   const [completedPracticeItems, setCompletedPracticeItems] = useState<string[]>([]);
   
-  // Audio State
+  // Audio State with Playlist (Chunking) logic
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  // Replaced AudioContext with a simple HTMLAudioElement ref for MP3 playback
+  const [speechQueue, setSpeechQueue] = useState<string[]>([]);
+  const [currentChunkIndex, setCurrentChunkIndex] = useState(-1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null); 
@@ -267,53 +268,80 @@ const LessonView: React.FC<LessonViewProps> = ({
   const stopAudio = () => {
       if (audioRef.current) {
           audioRef.current.pause();
-          audioRef.current.currentTime = 0; // Reset
+          audioRef.current.currentTime = 0;
+          audioRef.current.onended = null;
       }
+      setSpeechQueue([]);
+      setCurrentChunkIndex(-1);
       setIsSpeaking(false);
+      setIsLoadingAudio(false);
   };
 
-  const toggleSpeech = async () => {
+  const playChunk = async (text: string) => {
+      setIsLoadingAudio(true);
+      try {
+          const voice = lang === 'he' ? 'he-IL-AvriNeural' : 'en-US-BrianNeural';
+          
+          // Use POST to avoid URL length limits and send complex data
+          const response = await fetch('/api/tts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text, voice })
+          });
+          
+          if (!response.ok) {
+              const err = await response.text();
+              throw new Error(err || 'TTS Error');
+          }
+          
+          const blob = await response.blob();
+          const audioUrl = URL.createObjectURL(blob);
+          
+          if (audioRef.current) {
+              audioRef.current.src = audioUrl;
+              // Set up next chunk trigger
+              audioRef.current.onended = () => {
+                  setCurrentChunkIndex(prev => prev + 1);
+              };
+              await audioRef.current.play();
+          }
+      } catch (e) {
+          console.error("Audio Playback Error:", e);
+          setIsSpeaking(false); // Stop on error
+      } finally {
+          setIsLoadingAudio(false);
+      }
+  };
+
+  // Effect to manage the playlist queue
+  useEffect(() => {
+      if (isSpeaking && currentChunkIndex >= 0) {
+          if (currentChunkIndex < speechQueue.length) {
+              playChunk(speechQueue[currentChunkIndex]);
+          } else {
+              // End of playlist
+              setIsSpeaking(false);
+              setCurrentChunkIndex(-1);
+          }
+      }
+  }, [currentChunkIndex, isSpeaking, speechQueue]);
+
+  const toggleSpeech = () => {
     if (isSpeaking) {
       stopAudio();
     } else {
-      setIsLoadingAudio(true);
       const textToRead = cleanMarkdownForSpeech(lessonData.content);
-      
-      try {
-          // Select voice based on language
-          // he-IL-AvriNeural is a great male voice for Hebrew
-          // en-US-BrianNeural is a great voice for English
-          const voice = lang === 'he' ? 'he-IL-AvriNeural' : 'en-US-BrianNeural';
-          const encodedText = encodeURIComponent(textToRead);
-          
-          // Use our new Vercel API endpoint
-          const audioUrl = `/api/tts?text=${encodedText}&voice=${voice}`;
-          
-          if (audioRef.current) {
-              audioRef.current.pause();
-          }
-          
-          const audio = new Audio(audioUrl);
-          audioRef.current = audio;
+      // Split text into paragraphs/lines to chunk the requests. 
+      // Vercel functions timeout after 10s, so smaller chunks are safer.
+      const chunks = textToRead
+          .split('\n')
+          .map(s => s.trim())
+          .filter(s => s.length > 0);
 
-          audio.onended = () => {
-              setIsSpeaking(false);
-          };
-
-          audio.onerror = (e) => {
-              console.error("Audio Error", e);
-              setIsSpeaking(false);
-              alert(lang === 'he' ? "שגיאה בטעינת האודיו" : "Error loading audio");
-          };
-
-          await audio.play();
+      if (chunks.length > 0) {
+          setSpeechQueue(chunks);
+          setCurrentChunkIndex(0); // This triggers the useEffect
           setIsSpeaking(true);
-
-      } catch (error) {
-          console.error("Audio Playback Error", error);
-          alert("Error playing audio.");
-      } finally {
-          setIsLoadingAudio(false);
       }
     }
   };
@@ -424,13 +452,13 @@ const LessonView: React.FC<LessonViewProps> = ({
 
             <button
                 onClick={toggleSpeech}
-                disabled={isLoadingAudio}
+                disabled={isLoadingAudio && !isSpeaking} // Allow stop while loading
                 className={`flex items-center px-4 py-2 rounded-full font-medium transition-all duration-300 ${isSpeaking ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-700'}`}
             >
                 {isLoadingAudio ? (
                     <>
                         <Loader2 size={18} className="mr-2 rtl:ml-2 rtl:mr-0 animate-spin" />
-                        Loading Audio...
+                        Loading...
                     </>
                 ) : isSpeaking ? (
                     <>
