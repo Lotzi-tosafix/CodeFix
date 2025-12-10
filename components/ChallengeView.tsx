@@ -1,17 +1,28 @@
+
 import React, { useState } from 'react';
-import { TranslationStructure, Challenge } from '../types';
+import { TranslationStructure, Module } from '../types';
 import { ArrowLeft, CheckCircle, Loader2, Play, Trophy, XCircle, Info } from 'lucide-react';
 import Editor from "@monaco-editor/react";
 import confetti from 'canvas-confetti';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
 
 interface ChallengeViewProps {
   t: TranslationStructure;
-  challenge: Challenge;
-  onBack: () => void;
+  courseData: Module[];
   onComplete: () => void;
 }
 
-const ChallengeView: React.FC<ChallengeViewProps> = ({ t, challenge, onBack, onComplete }) => {
+const ChallengeView: React.FC<ChallengeViewProps> = ({ t, courseData, onComplete }) => {
+  const { courseId } = useParams();
+  const navigate = useNavigate();
+  
+  const module = courseData.find(m => m.id === courseId);
+  const challenge = module?.finalChallenge;
+
+  if (!module || !challenge) {
+      return <Navigate to="/curriculum" replace />;
+  }
+
   const [code, setCode] = useState(challenge.initialCode);
   const [previewKey, setPreviewKey] = useState(0);
   const [status, setStatus] = useState<'idle' | 'success' | 'failure'>('idle');
@@ -39,6 +50,11 @@ const ChallengeView: React.FC<ChallengeViewProps> = ({ t, challenge, onBack, onC
     }
   };
 
+  const handleComplete = () => {
+      onComplete();
+      navigate(`/course/${module.id}`);
+  };
+
   const srcDoc = `
     <html>
       <style>
@@ -58,7 +74,7 @@ const ChallengeView: React.FC<ChallengeViewProps> = ({ t, challenge, onBack, onC
          <div className="flex flex-col gap-3">
              {/* Title Row */}
              <div className="flex items-center gap-3">
-                 <button onClick={onBack} className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors">
+                 <button onClick={() => navigate(`/lesson/${module.lessons[module.lessons.length - 1].id}`)} className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors">
                      <ArrowLeft size={18} className="rtl:rotate-180" />
                  </button>
                  <h1 className="text-xl font-bold flex items-center text-slate-900 dark:text-white">
@@ -155,7 +171,7 @@ const ChallengeView: React.FC<ChallengeViewProps> = ({ t, challenge, onBack, onC
                          <div className="flex items-center text-green-700 dark:text-green-400 font-bold text-lg">
                              <CheckCircle className="mr-2" size={20} /> {t.challenge.success}
                          </div>
-                         <button onClick={onComplete} className="px-4 py-1.5 bg-green-600 text-white rounded-lg font-bold shadow-md hover:scale-105 transition-transform text-sm">
+                         <button onClick={handleComplete} className="px-4 py-1.5 bg-green-600 text-white rounded-lg font-bold shadow-md hover:scale-105 transition-transform text-sm">
                              {t.challenge.backToModule}
                          </button>
                      </div>

@@ -1,21 +1,18 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { TranslationStructure, Language, PracticeItem, QuizPractice, CodePractice } from '../types';
+import { TranslationStructure, Language, PracticeItem, QuizPractice, CodePractice, Module } from '../types';
 import { ArrowLeft, CheckCircle, ArrowRight, Play, Eye, Code, HelpCircle, Loader2, Lightbulb, Square, Volume2, Trophy } from 'lucide-react';
 import { getLessonContent } from '../data';
 import Editor from "@monaco-editor/react";
 import confetti from 'canvas-confetti';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
 
 interface LessonViewProps {
   t: TranslationStructure;
-  lessonId: string;
-  moduleTitle: string;
-  onBack: () => void;
   lang: Language;
-  onComplete: () => void;
-  isCompleted: boolean;
-  nextLessonId: string | null;
-  onNextLesson: (id: string) => void;
-  onStartChallenge: () => void;
+  onComplete: (id: string) => void;
+  completedLessons: string[];
+  courseData: Module[];
 }
 
 const cleanMarkdownForSpeech = (markdown: string): string => {
@@ -203,14 +200,42 @@ const CodePlayground: React.FC<{ item: CodePractice; t: TranslationStructure }> 
 };
 
 const LessonView: React.FC<LessonViewProps> = ({ 
-  t, lessonId, moduleTitle, onBack, lang, onComplete, isCompleted, nextLessonId, onNextLesson, onStartChallenge
+  t, lang, onComplete, completedLessons, courseData
 }) => {
+  const { lessonId } = useParams();
+  const navigate = useNavigate();
+  
+  // Find current module and lesson
+  let activeModule: Module | undefined;
+  let currentLessonIndex = -1;
+
+  for (const mod of courseData) {
+      const idx = mod.lessons.findIndex(l => l.id === lessonId);
+      if (idx !== -1) {
+          activeModule = mod;
+          currentLessonIndex = idx;
+          break;
+      }
+  }
+
+  // Redirect if not found
+  if (!activeModule || !lessonId) {
+      return <Navigate to="/curriculum" replace />;
+  }
+  
+  const lessonData = getLessonContent(lessonId, lang);
+  const isCompleted = completedLessons.includes(lessonId);
+
+  // Logic for Next Lesson
+  const nextLessonId = currentLessonIndex < activeModule.lessons.length - 1 
+      ? activeModule.lessons[currentLessonIndex + 1].id 
+      : null;
+
   const [completedPracticeItems, setCompletedPracticeItems] = useState<string[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const mainContentRef = useRef<HTMLDivElement>(null); 
   const [justCompleted, setJustCompleted] = useState(false);
 
-  const lessonData = getLessonContent(lessonId, lang);
   
   const quizzes = lessonData.practice?.filter(p => p.type === 'quiz') || [];
   const allQuizzesCompleted = quizzes.length === 0 || quizzes.every(q => completedPracticeItems.includes(q.id));
@@ -218,7 +243,7 @@ const LessonView: React.FC<LessonViewProps> = ({
 
   const handleComplete = () => {
     if (!canMarkComplete) return;
-    onComplete();
+    onComplete(lessonId);
     setJustCompleted(true);
     
     // Trigger confetti if this is the last lesson (no next lesson)
@@ -341,7 +366,7 @@ const LessonView: React.FC<LessonViewProps> = ({
       >
         <div className="flex justify-between items-center mb-8">
             <button 
-                onClick={onBack}
+                onClick={() => navigate(`/course/${activeModule?.id}`)}
                 className="flex items-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors group"
             >
                 <ArrowLeft size={20} className="mr-2 rtl:ml-2 rtl:mr-0 rtl:rotate-180 group-hover:-translate-x-1 transition-transform" />
@@ -373,7 +398,7 @@ const LessonView: React.FC<LessonViewProps> = ({
 
         <div className="mb-4 text-brand-600 dark:text-brand-400 text-sm font-bold uppercase tracking-wider flex items-center">
              <span className="w-2 h-2 bg-brand-500 rounded-full mr-2 rtl:mr-0 rtl:ml-2 animate-pulse"></span>
-            {moduleTitle}
+            {t.curriculum.modules[activeModule.titleKey]}
         </div>
         <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 dark:text-white mb-10 tracking-tight leading-tight">
             {lessonData.title}
@@ -443,7 +468,7 @@ const LessonView: React.FC<LessonViewProps> = ({
               ) : (
                  nextLessonId ? (
                    <button 
-                      onClick={() => onNextLesson(nextLessonId)}
+                      onClick={() => navigate(`/lesson/${nextLessonId}`)}
                       className="flex-1 sm:flex-none flex items-center justify-center px-8 py-3 bg-brand-600 hover:bg-brand-500 text-white rounded-full font-bold transition-all hover:scale-105 shadow-lg shadow-brand-500/20"
                    >
                       {t.lesson.nextLesson}
@@ -451,7 +476,7 @@ const LessonView: React.FC<LessonViewProps> = ({
                    </button>
                  ) : (
                    <button 
-                      onClick={onStartChallenge}
+                      onClick={() => navigate(`/challenge/${activeModule?.id}`)}
                       className="flex-1 sm:flex-none flex items-center justify-center px-8 py-3 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-400 hover:to-orange-500 text-white rounded-full font-bold transition-all hover:scale-105 shadow-lg shadow-yellow-500/30 animate-pulse"
                    >
                       <Trophy size={20} className="mr-2 rtl:ml-2 rtl:mr-0" />

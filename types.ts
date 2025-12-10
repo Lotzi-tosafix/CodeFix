@@ -1,7 +1,6 @@
+
 export type Language = 'en' | 'he';
 export type Theme = 'dark' | 'light';
-
-export type ViewState = 'home' | 'curriculum' | 'module' | 'lesson' | 'challenge' | 'about';
 
 export interface User {
   id: string;
@@ -60,6 +59,17 @@ export interface TranslationStructure {
       aiDesc: string;
       practicalTitle: string;
       practicalDesc: string;
+    };
+    topicsTitle: string;
+    topics: {
+      htmlTitle: string;
+      htmlDesc: string;
+      cssTitle: string;
+      cssDesc: string;
+      jsTitle: string;
+      jsDesc: string;
+      reactTitle: string;
+      reactDesc: string;
     };
     philosophyTitle: string;
     philosophyContent: string;

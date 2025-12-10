@@ -1,17 +1,26 @@
+
 import React from 'react';
 import { Module, TranslationStructure, User } from '../types';
 import { ArrowLeft, CheckCircle, Lock, Play, Globe, Palette, FileCode, Database, Cpu, Layout, Unlock } from 'lucide-react';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
 
 interface ModuleViewProps {
   t: TranslationStructure;
-  module: Module;
+  courseData: Module[];
   completedLessons: string[];
-  onBack: () => void;
-  onSelectLesson: (lessonId: string) => void;
   user: User | null;
 }
 
-const ModuleView: React.FC<ModuleViewProps> = ({ t, module, completedLessons, onBack, onSelectLesson, user }) => {
+const ModuleView: React.FC<ModuleViewProps> = ({ t, courseData, completedLessons, user }) => {
+  const navigate = useNavigate();
+  const { courseId } = useParams();
+  
+  const module = courseData.find(m => m.id === courseId);
+
+  if (!module) {
+      return <Navigate to="/curriculum" replace />;
+  }
+
   const totalLessons = module.lessons.length;
   const completedCount = module.lessons.filter(l => completedLessons.includes(l.id)).length;
   const progressPercent = totalLessons === 0 ? 0 : Math.round((completedCount / totalLessons) * 100);
@@ -28,12 +37,16 @@ const ModuleView: React.FC<ModuleViewProps> = ({ t, module, completedLessons, on
     }
   };
 
+  const handleLessonSelect = (lessonId: string) => {
+    navigate(`/lesson/${lessonId}`);
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto animate-fade-in-up">
       {/* Header */}
       <div className="mb-12">
         <button 
-            onClick={onBack}
+            onClick={() => navigate('/curriculum')}
             className="flex items-center text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-white mb-8 transition-colors group"
         >
             <ArrowLeft size={20} className="mr-2 rtl:ml-2 rtl:mr-0 rtl:rotate-180 group-hover:-translate-x-1 transition-transform" />
@@ -104,7 +117,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ t, module, completedLessons, on
             return (
                 <div 
                     key={lesson.id}
-                    onClick={() => isClickable && onSelectLesson(lesson.id)}
+                    onClick={() => isClickable && handleLessonSelect(lesson.id)}
                     className={`
                         relative group rounded-xl p-6 border transition-all duration-300 flex flex-col h-full
                         ${isClickable 

@@ -1,16 +1,19 @@
+
 import React from 'react';
 import { Module, TranslationStructure, User } from '../types';
 import { Lock, ArrowRight, Globe, Palette, FileCode, Database, Cpu, Unlock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface CurriculumProps {
   t: TranslationStructure;
-  onSelectModule: (module: Module) => void;
   completedLessons: string[];
   courseData: Module[];
   user: User | null;
 }
 
-const Curriculum: React.FC<CurriculumProps> = ({ t, onSelectModule, completedLessons, courseData, user }) => {
+const Curriculum: React.FC<CurriculumProps> = ({ t, completedLessons, courseData, user }) => {
+  const navigate = useNavigate();
+
   const getIcon = (iconName: string) => {
     switch(iconName) {
       case 'globe': return <Globe size={28} />;
@@ -23,6 +26,10 @@ const Curriculum: React.FC<CurriculumProps> = ({ t, onSelectModule, completedLes
   };
 
   const isAdmin = user?.isAdmin || false;
+
+  const handleModuleClick = (moduleId: string) => {
+    navigate(`/course/${moduleId}`);
+  };
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -44,7 +51,7 @@ const Curriculum: React.FC<CurriculumProps> = ({ t, onSelectModule, completedLes
           return (
             <div 
               key={mod.id} 
-              onClick={() => !isLocked && onSelectModule(mod)}
+              onClick={() => !isLocked && handleModuleClick(mod.id)}
               style={{ animationDelay: `${index * 100}ms` }}
               className={`
                 relative group rounded-2xl p-8 border transition-all duration-300 flex flex-col h-full animate-fade-in-up

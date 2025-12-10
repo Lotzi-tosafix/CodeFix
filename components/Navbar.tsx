@@ -1,6 +1,8 @@
+
 import React from 'react';
 import { Globe, Menu, X, Code2, LogIn, User as UserIcon, Sun, Moon } from 'lucide-react';
-import { Language, TranslationStructure, ViewState, User, Theme } from '../types';
+import { Language, TranslationStructure, User, Theme } from '../types';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 interface NavbarProps {
   lang: Language;
@@ -8,26 +10,32 @@ interface NavbarProps {
   theme: Theme;
   toggleTheme: () => void;
   t: TranslationStructure;
-  setView: (v: ViewState) => void;
-  currentView: ViewState;
   user: User | null;
   onLogin: () => void;
   onOpenProfile: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ lang, setLang, theme, toggleTheme, t, setView, currentView, user, onLogin, onOpenProfile }) => {
+const Navbar: React.FC<NavbarProps> = ({ lang, setLang, theme, toggleTheme, t, user, onLogin, onOpenProfile }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const toggleLang = () => {
     setLang(lang === 'en' ? 'he' : 'en');
   };
 
-  const navLinkClass = (view: ViewState) => `
+  const isActive = (path: string) => location.pathname === path;
+
+  const navLinkClass = (path: string) => `
     cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-colors
-    ${currentView === view 
+    ${isActive(path) 
       ? 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20' 
       : 'text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'}
   `;
+
+  // Hide Navbar on specific routes if needed, but usually good to keep it or use a minimalist version
+  const isImmersiveView = location.pathname.includes('/lesson/') || location.pathname.includes('/challenge/');
+  if (isImmersiveView) return null;
 
   return (
     <nav className="fixed w-full z-50 top-0 start-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-[#0f172a]/60">
@@ -35,27 +43,27 @@ const Navbar: React.FC<NavbarProps> = ({ lang, setLang, theme, toggleTheme, t, s
         <div className="flex items-center justify-between h-16">
           
           {/* Logo */}
-          <div className="flex items-center flex-shrink-0 cursor-pointer" onClick={() => setView('home')}>
+          <Link to="/" className="flex items-center flex-shrink-0 cursor-pointer">
             <div className="bg-gradient-to-tr from-brand-500 to-purple-600 p-2 rounded-lg mr-2 rtl:mr-0 rtl:ml-2">
               <Code2 className="h-6 w-6 text-white" />
             </div>
             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
               CodeFix
             </span>
-          </div>
+          </Link>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center">
             <div className="flex items-center space-x-2 rtl:space-x-reverse">
-              <span onClick={() => setView('home')} className={navLinkClass('home')}>
+              <Link to="/" className={navLinkClass('/')}>
                 {t.nav.home}
-              </span>
-              <span onClick={() => setView('curriculum')} className={navLinkClass('curriculum')}>
+              </Link>
+              <Link to="/curriculum" className={navLinkClass('/curriculum')}>
                 {t.nav.curriculum}
-              </span>
-              <span onClick={() => setView('about')} className={navLinkClass('about')}>
+              </Link>
+              <Link to="/about" className={navLinkClass('/about')}>
                 {t.nav.about}
-              </span>
+              </Link>
               
               <div className="h-6 w-px bg-slate-300 dark:bg-slate-700 mx-2"></div>
 
@@ -122,13 +130,13 @@ const Navbar: React.FC<NavbarProps> = ({ lang, setLang, theme, toggleTheme, t, s
                  </div>
              )}
 
-            <button onClick={() => {setView('home'); setIsOpen(false)}} className="block w-full text-start text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-white px-3 py-2 rounded-md text-base font-medium">
+            <button onClick={() => {navigate('/'); setIsOpen(false)}} className="block w-full text-start text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-white px-3 py-2 rounded-md text-base font-medium">
               {t.nav.home}
             </button>
-            <button onClick={() => {setView('curriculum'); setIsOpen(false)}} className="block w-full text-start text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-white px-3 py-2 rounded-md text-base font-medium">
+            <button onClick={() => {navigate('/curriculum'); setIsOpen(false)}} className="block w-full text-start text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-white px-3 py-2 rounded-md text-base font-medium">
               {t.nav.curriculum}
             </button>
-             <button onClick={() => {setView('about'); setIsOpen(false)}} className="block w-full text-start text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-white px-3 py-2 rounded-md text-base font-medium">
+             <button onClick={() => {navigate('/about'); setIsOpen(false)}} className="block w-full text-start text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-white px-3 py-2 rounded-md text-base font-medium">
               {t.nav.about}
             </button>
             

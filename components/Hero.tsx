@@ -1,15 +1,17 @@
+
 import React from 'react';
 import { ArrowRight, Code, Sparkles, Users, Star } from 'lucide-react';
-import { TranslationStructure, ViewState, Language } from '../types';
+import { TranslationStructure, Language } from '../types';
+import { useNavigate } from 'react-router-dom';
 
 interface HeroProps {
   t: TranslationStructure;
-  setView: (v: ViewState) => void;
   lang: Language;
 }
 
-const Hero: React.FC<HeroProps> = ({ t, setView, lang }) => {
+const Hero: React.FC<HeroProps> = ({ t, lang }) => {
   const isRTL = lang === 'he';
+  const navigate = useNavigate();
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
@@ -39,7 +41,7 @@ const Hero: React.FC<HeroProps> = ({ t, setView, lang }) => {
 
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
           <button 
-            onClick={() => setView('curriculum')}
+            onClick={() => navigate('/curriculum')}
             className="group relative px-8 py-4 bg-brand-600 rounded-full text-white font-bold text-lg shadow-lg shadow-brand-500/30 hover:bg-brand-500 transition-all transform hover:-translate-y-1 overflow-hidden"
           >
             <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1s_infinite]"></div>
@@ -50,7 +52,7 @@ const Hero: React.FC<HeroProps> = ({ t, setView, lang }) => {
           </button>
           
           <button 
-            onClick={() => setView('about')}
+            onClick={() => navigate('/about')}
             className="px-8 py-4 bg-white dark:bg-slate-800 rounded-full text-slate-700 dark:text-slate-200 font-bold text-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:-translate-y-1"
           >
             {t.hero.ctaSecondary}

@@ -1,9 +1,10 @@
+
 import { TranslationStructure } from './types';
 
 export const en: TranslationStructure = {
   nav: {
     home: "Home",
-    curriculum: "Roadmap",
+    curriculum: "Courses",
     about: "About",
     getStarted: "Start Coding",
     language: "English",
@@ -22,7 +23,7 @@ export const en: TranslationStructure = {
     title: "User Profile",
     progressTitle: "My Progress",
     deleteLesson: "Remove",
-    resetAll: "Reset Entire Course",
+    resetAll: "Reset All Courses",
     resetConfirm: "Are you sure? This cannot be undone.",
     noProgress: "You haven't completed any lessons yet.",
     hello: "Hello",
@@ -34,7 +35,7 @@ export const en: TranslationStructure = {
     titleHighlight: "From Zero to Hero",
     subtitle: "The most friendly, engaging, and modern way to learn coding. No scary jargon, just pure skills. Your journey starts here.",
     ctaPrimary: "Start Learning Now",
-    ctaSecondary: "About the Course",
+    ctaSecondary: "What will I learn?",
     stats_students: "Active Learners",
     stats_lessons: "Interactive Lessons",
     stats_rating: "5.0 Rating"
@@ -48,14 +49,25 @@ export const en: TranslationStructure = {
       aiTitle: "AI Powered Tutor",
       aiDesc: "Stuck? Our Gemini-powered AI tutor is available 24/7 inside every lesson to explain concepts and debug your code instantly.",
       practicalTitle: "Project Based",
-      practicalDesc: "Theory is good, but practice is better. Every module ends with real-world scenarios and code challenges."
+      practicalDesc: "Theory is good, but practice is better. Every course ends with real-world scenarios and code challenges."
     },
-    philosophyTitle: "Our Philosophy",
+    topicsTitle: "What You Will Learn",
+    topics: {
+      htmlTitle: "HTML5 Structure",
+      htmlDesc: "The skeleton of the web. Learn tags, semantic structure, and SEO basics.",
+      cssTitle: "CSS3 Styling",
+      cssDesc: "Make it beautiful. Master Flexbox, Grid, animations, and responsive design.",
+      jsTitle: "JavaScript Logic",
+      jsDesc: "The brain of your site. Variables, functions, DOM manipulation, and logic.",
+      reactTitle: "Modern React",
+      reactDesc: "Build powerful single-page applications with Components, Hooks, and State."
+    },
+    philosophyTitle: "Our Method",
     philosophyContent: "We believe that coding should be accessible to everyone. The traditional way of learning—watching hours of video lectures—is outdated. At CodeFix, we focus on 'Learning by Doing'. We strip away the complex academic jargon and focus on the skills that actually get you hired.",
     cta: "Ready to start your journey?"
   },
   curriculum: {
-    title: "Your Learning Path",
+    title: "Our Courses",
     subtitle: "A step-by-step journey from your first line of HTML to a full-stack application.",
     modules: {
       basics: "HTML & Internet Basics",
@@ -69,13 +81,13 @@ export const en: TranslationStructure = {
       intermediate: "Intermediate",
       advanced: "Advanced"
     },
-    startModule: "Explore Module",
-    continueModule: "Continue Module",
-    locked: "Complete Previous Module"
+    startModule: "Start Course",
+    continueModule: "Continue Course",
+    locked: "Complete Previous Course"
   },
   module: {
-    backToRoadmap: "Back to Roadmap",
-    progress: "Module Progress",
+    backToRoadmap: "Back to Courses",
+    progress: "Course Progress",
     lessons: "Lessons",
     startLesson: "Start Lesson",
     completed: "Completed",
@@ -85,7 +97,7 @@ export const en: TranslationStructure = {
     aiTutorTitle: "CodeFix AI Tutor",
     aiTutorPlaceholder: "Ask me anything about the lesson (e.g., 'Explain this tag', 'Why use that?')",
     aiTutorButton: "Ask AI",
-    backToCurriculum: "Back to Module",
+    backToCurriculum: "Back to Course",
     nextLesson: "Next Lesson",
     finalChallenge: "Final Challenge 🏆",
     completed: "Lesson Completed!",
@@ -104,7 +116,7 @@ export const en: TranslationStructure = {
     runTests: "Submit & Verify",
     success: "Mission Accomplished! You are amazing! 🎉",
     failure: "Not quite there. Check the requirements and try again.",
-    backToModule: "Finish Module"
+    backToModule: "Finish Course"
   },
   practice: {
     title: "Practice Zone",
@@ -123,7 +135,7 @@ export const en: TranslationStructure = {
 export const he: TranslationStructure = {
   nav: {
     home: "ראשי",
-    curriculum: "מסלול הלימוד",
+    curriculum: "הקורסים",
     about: "אודות",
     getStarted: "בואו נתחיל",
     language: "עברית",
@@ -142,7 +154,7 @@ export const he: TranslationStructure = {
     title: "פרופיל משתמש",
     progressTitle: "ההתקדמות שלי",
     deleteLesson: "מחק התקדמות",
-    resetAll: "אפס את כל הקורס",
+    resetAll: "אפס את כל הקורסים",
     resetConfirm: "האם אתה בטוח? פעולה זו לא ניתנת לביטול.",
     noProgress: "טרם השלמת שיעורים. זה הזמן להתחיל!",
     hello: "שלום",
@@ -154,7 +166,7 @@ export const he: TranslationStructure = {
     titleHighlight: "מאפס למאה",
     subtitle: "הדרך הכי כיפית, מודרנית ופשוטה ללמוד תכנות. בלי מילים מסובכות, רק תכל'ס ידע ופרקטיקה. הקריירה החדשה שלכם מתחילה כאן.",
     ctaPrimary: "יאללה, מתחילים ללמוד",
-    ctaSecondary: "מה לומדים בקורס?",
+    ctaSecondary: "מה תלמדו באתר?",
     stats_students: "תלמידים רשומים",
     stats_lessons: "שיעורים",
     stats_rating: "דירוג התלמידים"
@@ -168,14 +180,25 @@ export const he: TranslationStructure = {
       aiTitle: "חונך אישי מבוסס AI",
       aiDesc: "נתקעתם? הבינה המלאכותית שלנו (מבוססת Gemini) זמינה 24/7 בתוך כל שיעור כדי להסביר מושגים ולעזור לכם לדבג.",
       practicalTitle: "מבוסס פרויקטים",
-      practicalDesc: "תיאוריה זה נחמד, אבל פרקטיקה זה החיים. כל מודול מסתיים באתגרים מהעולם האמיתי."
+      practicalDesc: "תיאוריה זה נחמד, אבל פרקטיקה זה החיים. כל קורס מסתיים באתגרים מהעולם האמיתי."
     },
-    philosophyTitle: "הפילוסופיה שלנו",
+    topicsTitle: "מה לומדים באתר?",
+    topics: {
+      htmlTitle: "מבנה עם HTML5",
+      htmlDesc: "השלד של האינטרנט. נלמד תגיות, סמנטיקה, נגישות ומבנה נכון של עמודים.",
+      cssTitle: "עיצוב עם CSS3",
+      cssDesc: "הופכים את האתר ליפהפה. שליטה ב-Flexbox, Grid, אנימציות ועיצוב רספונסיבי.",
+      jsTitle: "לוגיקה עם JavaScript",
+      jsDesc: "המוח של האתר. משתנים, פונקציות, לולאות ושינוי התוכן בזמן אמת.",
+      reactTitle: "אפליקציות עם React",
+      reactDesc: "פיתוח אפליקציות מודרניות ומורכבות באמצעות קומפוננטות, Hooks וניהול State."
+    },
+    philosophyTitle: "השיטה שלנו",
     philosophyContent: "אנחנו מאמינים שתכנות צריך להיות נגיש לכולם. הדרך המסורתית - צפייה בשעות של הרצאות וידאו - מיושנת. ב-CodeFix אנחנו מתמקדים ב'למידה דרך עשייה'. הסרנו את המילים האקדמיות המפחידות ואנחנו מתמקדים בכישורים שבאמת יעזרו לכם למצוא עבודה.",
     cta: "מוכנים להתחיל את המסע?"
   },
   curriculum: {
-    title: "מפת הדרכים שלך",
+    title: "הקורסים שלנו",
     subtitle: "מסלול צעד-אחר-צעד: משורת הקוד הראשונה ב-HTML ועד בניית אפליקציות מלאות ומתקדמות.",
     modules: {
       basics: "יסודות האינטרנט ו-HTML",
@@ -189,14 +212,14 @@ export const he: TranslationStructure = {
       intermediate: "בינוני",
       advanced: "מתקדמים"
     },
-    startModule: "כנס למודול",
-    continueModule: "המשך מאיפה שעצרת",
-    locked: "יש לסיים את המודול הקודם"
+    startModule: "התחל קורס",
+    continueModule: "המשך קורס",
+    locked: "יש לסיים את הקורס הקודם"
   },
   module: {
-    backToRoadmap: "חזרה למפת הדרכים",
-    progress: "ההתקדמות שלך במודול",
-    lessons: "שיעורי המודול",
+    backToRoadmap: "חזרה לרשימת הקורסים",
+    progress: "התקדמות בקורס",
+    lessons: "שיעורי הקורס",
     startLesson: "התחל שיעור",
     completed: "הושלם בהצלחה",
     locked: "טרם נפתח"
@@ -205,7 +228,7 @@ export const he: TranslationStructure = {
     aiTutorTitle: "החונך האישי (AI)",
     aiTutorPlaceholder: "אני כאן לכל שאלה על השיעור (למשל: 'מה זה תגית?', 'הסבר לי שוב')",
     aiTutorButton: "שלח שאלה",
-    backToCurriculum: "חזרה לרשימת השיעורים",
+    backToCurriculum: "חזרה לקורס",
     nextLesson: "לשיעור הבא",
     finalChallenge: "אתגר הסיום 🏆",
     completed: "סיימתי את השיעור!",
@@ -224,7 +247,7 @@ export const he: TranslationStructure = {
     runTests: "הגש ובדוק",
     success: "משימה הושלמה! אתה פשוט אלוף! 🎉",
     failure: "עדיין לא שם. בדוק את הדרישות ונסה שוב.",
-    backToModule: "סיים מודול בהצלחה"
+    backToModule: "סיים קורס בהצלחה"
   },
   practice: {
     title: "המעבדה - אזור תרגול",
