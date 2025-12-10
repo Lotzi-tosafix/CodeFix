@@ -21,16 +21,16 @@ interface LessonViewProps {
 
 const cleanMarkdownForSpeech = (markdown: string): string => {
   return markdown
-    .replace(/```[\s\S]*?```/g, 'Code example.')
+    .replace(/```[\s\S]*?```/g, ' Code example. ')
     .replace(/`([^`]+)`/g, '$1')
     .replace(/#{1,6}\s?/g, '')
     .replace(/(\*\*|__)(.*?)\1/g, '$2')
     .replace(/(\*|_)(.*?)\1/g, '$2')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/>\s?/g, '')
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, 'Image: $1')
-    .replace(/^(\s*-\s|\s*\d+\.\s)/gm, '')
-    .replace(/\n+/g, '\n'); // Keep newlines for splitting
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, ' Image description: $1. ')
+    .replace(/^(\s*-\s|\s*\d+\.\s)/gm, '. ')
+    .replace(/\n+/g, '. '); // Replace newlines with periods to help sentence splitting
 };
 
 const QuizComponent: React.FC<{ item: QuizPractice; t: TranslationStructure; onSolved: (id: string) => void }> = ({ item, t, onSolved }) => {
@@ -278,11 +278,16 @@ const LessonView: React.FC<LessonViewProps> = ({
   };
 
   const playChunk = async (text: string) => {
+      if (!text || text.length < 2) {
+          // Skip empty or tiny chunks
+          setCurrentChunkIndex(prev => prev + 1);
+          return;
+      }
+
       setIsLoadingAudio(true);
       try {
           const voice = lang === 'he' ? 'he-IL-AvriNeural' : 'en-US-BrianNeural';
           
-          // Use POST to avoid URL length limits and send complex data
           const response = await fetch('/api/tts', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -299,49 +304,62 @@ const LessonView: React.FC<LessonViewProps> = ({
           
           if (audioRef.current) {
               audioRef.current.src = audioUrl;
-              // Set up next chunk trigger
               audioRef.current.onended = () => {
+                  URL.revokeObjectURL(audioUrl); // Cleanup memory
                   setCurrentChunkIndex(prev => prev + 1);
               };
               await audioRef.current.play();
           }
       } catch (e) {
           console.error("Audio Playback Error:", e);
-          setIsSpeaking(false); // Stop on error
+          // Don't stop entirely on one chunk error, try next
+          setCurrentChunkIndex(prev => prev + 1);
       } finally {
           setIsLoadingAudio(false);
       }
   };
 
-  // Effect to manage the playlist queue
   useEffect(() => {
       if (isSpeaking && currentChunkIndex >= 0) {
           if (currentChunkIndex < speechQueue.length) {
               playChunk(speechQueue[currentChunkIndex]);
           } else {
-              // End of playlist
               setIsSpeaking(false);
               setCurrentChunkIndex(-1);
           }
       }
-  }, [currentChunkIndex, isSpeaking, speechQueue]);
+  }, [currentChunkIndex, isSpeaking]); 
+  // removed speechQueue dependency to avoid re-triggering loops if queue doesn't change
 
   const toggleSpeech = () => {
     if (isSpeaking) {
       stopAudio();
     } else {
       const textToRead = cleanMarkdownForSpeech(lessonData.content);
-      // Split text into paragraphs/lines to chunk the requests. 
-      // Vercel functions timeout after 10s, so smaller chunks are safer.
+      
+      // Better chunking strategy: split by periods, questions, etc.
+      // This creates smaller chunks which process faster on serverless.
       const chunks = textToRead
-          .split('\n')
-          .map(s => s.trim())
-          .filter(s => s.length > 0);
+          .split(/([.?!])\s+/) // Split by sentence terminators
+          .reduce((acc: string[], curr, idx, arr) => {
+             // Recombine the punctuation with the sentence
+             if (idx % 2 === 0) {
+                 const punctuation = arr[idx + 1] || '';
+                 const sentence = (curr + punctuation).trim();
+                 if (sentence) acc.push(sentence);
+             }
+             return acc;
+          }, []);
 
       if (chunks.length > 0) {
           setSpeechQueue(chunks);
-          setCurrentChunkIndex(0); // This triggers the useEffect
+          setCurrentChunkIndex(0);
           setIsSpeaking(true);
+          
+          // Init audio element if not exists
+          if (!audioRef.current) {
+              audioRef.current = new Audio();
+          }
       }
     }
   };
@@ -366,7 +384,6 @@ const LessonView: React.FC<LessonViewProps> = ({
     
     return () => {
        stopAudio();
-       // Clean up audio object
        if (audioRef.current) {
            audioRef.current.pause();
            audioRef.current = null;
