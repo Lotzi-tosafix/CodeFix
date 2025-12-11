@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { TranslationStructure } from '../types';
 import { Mail, Send, CheckCircle, AlertCircle, User, MessageSquare } from 'lucide-react';
 import { sendContactEmail } from '../services/email';
+import { saveContactMessage } from '../services/firebase';
 
 interface ContactProps {
   t: TranslationStructure;
@@ -27,11 +28,18 @@ const Contact: React.FC<ContactProps> = ({ t }) => {
     setStatus('sending');
 
     try {
+      // 1. Save to database for Admin Dashboard
+      await saveContactMessage(formData.name, formData.email, formData.subject, formData.message);
+      
+      // 2. Send email notification (Existing logic)
       await sendContactEmail(formData.name, formData.email, formData.subject, formData.message);
+      
       setStatus('success');
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
       console.error(error);
+      // Even if email fails, if DB saved, we consider it a soft success or handle specific errors
+      // For simplicity here, general error if both fail or sequence breaks
       setStatus('error');
     }
   };

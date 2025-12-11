@@ -6,7 +6,7 @@ import { getLessonContent } from '../data';
 import Editor from "@monaco-editor/react";
 import confetti from 'canvas-confetti';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
-import { auth, voteLesson, getLessonRating } from '../services/firebase';
+import { auth, voteLesson, getLessonRating, saveLessonFeedback } from '../services/firebase';
 import RatingFeedbackModal from './RatingFeedbackModal';
 import { sendFeedbackEmail } from '../services/email';
 
@@ -311,7 +311,12 @@ const LessonView: React.FC<LessonViewProps> = ({
   const handleSendFeedback = async (feedbackText: string) => {
       setIsSendingFeedback(true);
       try {
+          // 1. Save to Database for Admin Dashboard
+          await saveLessonFeedback(lessonId, feedbackText, auth.currentUser?.email || undefined);
+
+          // 2. Send Email Notification
           await sendFeedbackEmail(lessonId, feedbackText, auth.currentUser?.email || undefined);
+          
           setShowFeedbackModal(false);
       } catch (e) {
           console.error("Failed to send feedback", e);

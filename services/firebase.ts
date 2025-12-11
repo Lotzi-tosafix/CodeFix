@@ -1,7 +1,7 @@
 
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, runTransaction } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, runTransaction, collection, addDoc, query, orderBy, getDocs } from "firebase/firestore";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -162,5 +162,64 @@ export const voteLesson = async (lessonId: string, voteType: 'up' | 'down', user
     } catch (e) {
         console.error("Vote failed: ", e);
         return false;
+    }
+};
+
+// --- Admin Features ---
+
+// Save Contact Message
+export const saveContactMessage = async (name: string, email: string, subject: string, message: string) => {
+    try {
+        await addDoc(collection(db, "contact_submissions"), {
+            name,
+            email,
+            subject,
+            message,
+            timestamp: new Date()
+        });
+        return true;
+    } catch (e) {
+        console.error("Error saving contact message: ", e);
+        return false;
+    }
+};
+
+// Save Lesson Feedback (Dislike)
+export const saveLessonFeedback = async (lessonId: string, feedback: string, userEmail?: string) => {
+    try {
+        await addDoc(collection(db, "lesson_feedback"), {
+            lessonId,
+            feedback,
+            userEmail: userEmail || 'Anonymous',
+            timestamp: new Date()
+        });
+        return true;
+    } catch (e) {
+        console.error("Error saving feedback: ", e);
+        return false;
+    }
+};
+
+// Get All Contact Messages (For Admin)
+export const getAdminMessages = async () => {
+    try {
+        const q = query(collection(db, "contact_submissions"), orderBy("timestamp", "desc"));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (e) {
+        console.error("Error fetching admin messages: ", e);
+        return [];
+    }
+};
+
+// Get All Feedback (For Admin)
+export const getAdminFeedback = async () => {
+    try {
+        const q = query(collection(db, "lesson_feedback"), orderBy("timestamp", "desc"));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (e) {
+        console.error("Error fetching admin feedback: ", e);
+        return [];
     }
 };

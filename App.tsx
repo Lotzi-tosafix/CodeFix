@@ -11,6 +11,7 @@ import Contact from './components/Contact';
 import ProfileModal from './components/ProfileModal';
 import ChallengeView from './components/ChallengeView';
 import LoginModal from './components/LoginModal';
+import AdminDashboard from './components/AdminDashboard';
 import { en, he } from './locales';
 import { Language, User, Theme } from './types';
 import { getCourseData } from './data';
@@ -51,6 +52,7 @@ function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [showGuestWarning, setShowGuestWarning] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   // Initialize Firebase Auth Listener
   useEffect(() => {
@@ -84,6 +86,7 @@ function App() {
         setCompletedLessons([]);
         setShowGuestWarning(true);
       }
+      setAuthInitialized(true);
     });
 
     return () => unsubscribe();
@@ -174,8 +177,8 @@ function App() {
     <HashRouter>
         <div className={`min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-50 selection:bg-brand-500 selection:text-white ${lang === 'he' ? 'rtl' : 'ltr'} transition-colors duration-300`}>
         
-        {/* Warning for Guests - Hide on lesson/challenge views done via css or location check in future, but keeping simple here */}
-        {!user && showGuestWarning && (
+        {/* Warning for Guests - Hide until auth is initialized */}
+        {!user && showGuestWarning && authInitialized && (
             <div className="fixed bottom-0 left-0 w-full z-40 bg-amber-600/90 backdrop-blur-md text-white p-3 flex items-center justify-center shadow-[0_-4px_20px_rgba(0,0,0,0.3)] animate-fade-in-up">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-3 text-center md:text-start px-4">
                     <AlertTriangle className="animate-pulse flex-shrink-0" />
@@ -239,6 +242,7 @@ function App() {
                 <Route path="/curriculum" element={<Curriculum t={t} completedLessons={completedLessons} courseData={courseData} user={user} />} />
                 <Route path="/about" element={<About t={t} />} />
                 <Route path="/contact" element={<Contact t={t} />} />
+                <Route path="/admin" element={<AdminDashboard t={t} user={user} />} />
                 
                 <Route 
                     path="/course/:courseId" 
@@ -281,7 +285,7 @@ function App() {
             </Routes>
         </main>
 
-        <footer className={`py-8 text-center text-slate-600 dark:text-slate-400 text-sm border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0f172a] ${!user && showGuestWarning ? 'mb-20' : ''}`}>
+        <footer className={`py-8 text-center text-slate-600 dark:text-slate-400 text-sm border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0f172a] ${!user && showGuestWarning && authInitialized ? 'mb-20' : ''}`}>
             <p>&copy; {new Date().getFullYear()} CodeFix. Built with React & Tailwind.</p>
         </footer>
         </div>

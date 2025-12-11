@@ -11,7 +11,26 @@ export const en: TranslationStructure = {
     language: "English",
     login: "Login",
     logout: "Logout",
-    profile: "My Profile"
+    profile: "My Profile",
+    admin: "Admin Dashboard"
+  },
+  admin: {
+    title: "Admin Dashboard",
+    tabs: {
+        messages: "Contact Messages",
+        feedback: "Lesson Feedback"
+    },
+    table: {
+        date: "Date",
+        name: "Name",
+        email: "Email",
+        subject: "Subject",
+        message: "Message",
+        lessonId: "Lesson ID",
+        feedback: "Reason"
+    },
+    empty: "No records found.",
+    accessDenied: "Access Denied. Admins only."
   },
   auth: {
     guestWarningTitle: "You are in Guest Mode",
@@ -170,7 +189,26 @@ export const he: TranslationStructure = {
     language: "עברית",
     login: "התחבר",
     logout: "התנתק",
-    profile: "הפרופיל שלי"
+    profile: "הפרופיל שלי",
+    admin: "אזור ניהול"
+  },
+  admin: {
+    title: "דשבורד ניהול",
+    tabs: {
+        messages: "הודעות צור קשר",
+        feedback: "משובי דיסלייק"
+    },
+    table: {
+        date: "תאריך",
+        name: "שם",
+        email: "אימייל",
+        subject: "נושא",
+        message: "הודעה",
+        lessonId: "מס' שיעור",
+        feedback: "סיבת המשוב"
+    },
+    empty: "לא נמצאו רשומות.",
+    accessDenied: "הגישה למנהלים בלבד."
   },
   auth: {
     guestWarningTitle: "אתה גולש במצב אורח",

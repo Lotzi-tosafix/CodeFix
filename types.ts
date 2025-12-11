@@ -10,6 +10,23 @@ export interface User {
   isAdmin?: boolean; // God mode
 }
 
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  timestamp: any; // Firestore Timestamp
+}
+
+export interface LessonFeedback {
+  id: string;
+  lessonId: string;
+  feedback: string;
+  userEmail?: string;
+  timestamp: any;
+}
+
 export interface TranslationStructure {
   nav: {
     home: string;
@@ -21,6 +38,7 @@ export interface TranslationStructure {
     login: string;
     logout: string;
     profile: string;
+    admin: string;
   };
   auth: {
     guestWarningTitle: string;
@@ -41,6 +59,24 @@ export interface TranslationStructure {
     hello: string;
     adminMode: string;
     adminModeDesc: string;
+  };
+  admin: {
+    title: string;
+    tabs: {
+        messages: string;
+        feedback: string;
+    };
+    table: {
+        date: string;
+        name: string;
+        email: string;
+        subject: string;
+        message: string;
+        lessonId: string;
+        feedback: string;
+    };
+    empty: string;
+    accessDenied: string;
   };
   hero: {
     titlePrefix: string;
