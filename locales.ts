@@ -8,7 +8,7 @@ export const en: TranslationStructure = {
     about: "About",
     getStarted: "Start Coding",
     language: "English",
-    login: "Login with Google",
+    login: "Login",
     logout: "Logout",
     profile: "My Profile"
   },
@@ -17,7 +17,9 @@ export const en: TranslationStructure = {
     guestWarningDesc: "Your progress is NOT saved. Login to sync your journey across devices and keep your achievements.",
     loginWithGoogle: "Sign in with Google",
     loginSuccess: "Welcome back!",
-    logoutSuccess: "Logged out successfully"
+    logoutSuccess: "Logged out successfully",
+    loginTitle: "Join CodeFix",
+    loginSubtitle: "Sign in to save your progress and access all features"
   },
   profile: {
     title: "User Profile",
@@ -139,7 +141,7 @@ export const he: TranslationStructure = {
     about: "אודות",
     getStarted: "בואו נתחיל",
     language: "עברית",
-    login: "התחבר עם Google",
+    login: "התחבר",
     logout: "התנתק",
     profile: "הפרופיל שלי"
   },
@@ -148,7 +150,9 @@ export const he: TranslationStructure = {
     guestWarningDesc: "ההתקדמות שלך לא נשמרת! כדי לסנכרן את הלמידה ולשמור על ההישגים, מומלץ להתחבר.",
     loginWithGoogle: "כניסה עם Google",
     loginSuccess: "איזה כיף שחזרת!",
-    logoutSuccess: "התנתקת בהצלחה"
+    logoutSuccess: "התנתקת בהצלחה",
+    loginTitle: "התחברות ל-CodeFix",
+    loginSubtitle: "התחבר כדי לשמור את ההתקדמות שלך ולקבל גישה לכל הפיצ'רים"
   },
   profile: {
     title: "פרופיל משתמש",

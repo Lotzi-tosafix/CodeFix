@@ -16,6 +16,7 @@ interface LessonViewProps {
 }
 
 const cleanMarkdownForSpeech = (markdown: string): string => {
+  if (!markdown) return '';
   return markdown
     .replace(/```[\s\S]*?```/g, 'Code example.')
     .replace(/`([^`]+)`/g, '$1')
@@ -27,6 +28,17 @@ const cleanMarkdownForSpeech = (markdown: string): string => {
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, 'Image: $1')
     .replace(/^(\s*-\s|\s*\d+\.\s)/gm, '')
     .replace(/\n+/g, '. ');
+};
+
+// Extracted to be reusable in QuizComponent
+const renderInlineMarkdown = (text: string) => {
+  if (!text) return null;
+  const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+  return parts.map((p, pi) => {
+      if (p.startsWith('**') && p.endsWith('**')) return <strong key={pi} className="text-slate-900 dark:text-white font-semibold">{p.slice(2, -2)}</strong>;
+      if (p.startsWith('`') && p.endsWith('`')) return <code key={pi} className="bg-slate-200 dark:bg-slate-800/80 px-1.5 py-0.5 rounded-md text-brand-700 dark:text-brand-300 font-mono text-sm border border-slate-300 dark:border-slate-700/50 mx-1 shadow-sm inline-block" dir="ltr">{p.slice(1, -1)}</code>;
+      return p;
+  });
 };
 
 const QuizComponent: React.FC<{ item: QuizPractice; t: TranslationStructure; onSolved: (id: string) => void }> = ({ item, t, onSolved }) => {
@@ -63,7 +75,7 @@ const QuizComponent: React.FC<{ item: QuizPractice; t: TranslationStructure; onS
                   : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'}
             `}
           >
-            <span>{option}</span>
+            <span>{renderInlineMarkdown(option)}</span>
             {submitted && idx === item.correctAnswer && idx === selected && <CheckCircle size={18} className="text-green-600 dark:text-green-400" />}
           </button>
         ))}
@@ -75,7 +87,7 @@ const QuizComponent: React.FC<{ item: QuizPractice; t: TranslationStructure; onS
             {isCorrect ? t.practice.quizCorrect : t.practice.quizIncorrect}
           </p>
           {isCorrect && item.explanation && (
-            <p className="text-sm opacity-90">{item.explanation}</p>
+            <p className="text-sm opacity-90">{renderInlineMarkdown(item.explanation)}</p>
           )}
         </div>
       )}
@@ -298,6 +310,7 @@ const LessonView: React.FC<LessonViewProps> = ({
   }, [lessonId]);
 
   const renderMarkdown = (content: string) => {
+    if (!content) return null;
     const parts = content.split(/(```[\s\S]*?```)/g);
     return parts.map((part, index) => {
       if (part.startsWith('```')) {
@@ -344,15 +357,6 @@ const LessonView: React.FC<LessonViewProps> = ({
           </div>
         );
       }
-    });
-  };
-
-  const renderInlineMarkdown = (text: string) => {
-    const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
-    return parts.map((p, pi) => {
-        if (p.startsWith('**') && p.endsWith('**')) return <strong key={pi} className="text-slate-900 dark:text-white font-semibold">{p.slice(2, -2)}</strong>;
-        if (p.startsWith('`') && p.endsWith('`')) return <code key={pi} className="bg-slate-200 dark:bg-slate-800/80 px-1.5 py-0.5 rounded-md text-brand-700 dark:text-brand-300 font-mono text-sm border border-slate-300 dark:border-slate-700/50 mx-1 shadow-sm" dir="ltr">{p.slice(1, -1)}</code>;
-        return p;
     });
   };
 

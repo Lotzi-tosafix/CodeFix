@@ -1,3 +1,4 @@
+
 import { TranslationStructure, Module, Lesson, Language, PracticeItem, Challenge } from './types';
 
 // Curriculum structure based on Full Stack Web Development flow
@@ -66,44 +67,50 @@ The page must include the following elements in order:
           content: '' 
         },
         { 
+          id: 'html-syntax', 
+          title: isHe ? '3. המילון: סימנים ותחביר' : '3. Syntax & Symbols Dictionary', 
+          description: isHe ? 'מה אומר כל סימן במקלדת? הסבר מעמיק על <, >, /, = וגרשיים.' : 'Decoding the symbols: What do <, >, /, =, and quotes actually mean?', 
+          content: '' 
+        },
+        { 
           id: 'html-structure', 
-          title: isHe ? '3. קינון והזחה (Nesting)' : '3. Nesting & Indentation', 
+          title: isHe ? '4. קינון והזחה (Nesting)' : '4. Nesting & Indentation', 
           description: isHe ? 'הסוד לקוד נקי: למה עושים רווחים (Tab)? ומה זה "אבא ובן"?' : 'Clean code secrets: Why indent? Parent/Child relationships explained.', 
           content: '' 
         },
         { 
           id: 'html-comments', 
-          title: isHe ? '4. הערות בקוד (Comments)' : '4. HTML Comments', 
+          title: isHe ? '5. הערות בקוד (Comments)' : '5. HTML Comments', 
           description: isHe ? 'איך לכתוב טקסט שהדפדפן מתעלם ממנו? הודעות למתכנתים.' : 'Writing notes that the browser ignores.', 
           content: '' 
         },
         { 
           id: 'html-text', 
-          title: isHe ? '5. עיצוב טקסט וכותרות' : '5. Text Formatting Tags', 
+          title: isHe ? '6. עיצוב טקסט וכותרות' : '6. Text Formatting Tags', 
           description: isHe ? 'היררכיה נכונה של כותרות (H1-H6) ועיצוב סמנטי.' : 'Correct hierarchy (H1-H6) and semantic styling.', 
           content: '' 
         },
         { 
           id: 'html-links', 
-          title: isHe ? '6. קישורים (Links)' : '6. Links & Anchors', 
+          title: isHe ? '7. קישורים (Links)' : '7. Links & Anchors', 
           description: isHe ? 'הסוד של האינטרנט: לחבר דפים אחד לשני באמצעות לינקים.' : 'Connect webpages together using hyperlinks and attributes.', 
           content: '' 
         },
         { 
           id: 'html-images', 
-          title: isHe ? '7. תמונות ומדיה' : '7. Images & Attributes', 
+          title: isHe ? '8. תמונות ומדיה' : '8. Images & Attributes', 
           description: isHe ? 'מוסיפים צבע לחיים: איך מטמיעים תמונות ומגדירים להן תכונות.' : 'Embed images and learn about the src and alt attributes.', 
           content: '' 
         },
         { 
           id: 'html-lists', 
-          title: isHe ? '8. רשימות (Lists)' : '8. Lists (Ordered & Unordered)', 
+          title: isHe ? '9. רשימות (Lists)' : '9. Lists (Ordered & Unordered)', 
           description: isHe ? 'מסדרים את התוכן בצורה נקייה עם רשימות מסודרות ולא מסודרות.' : 'Organize content with bullet points and numbered lists.', 
           content: '' 
         },
         { 
           id: 'html-forms', 
-          title: isHe ? '9. טפסים וקלט' : '9. Forms & Inputs', 
+          title: isHe ? '10. טפסים וקלט' : '10. Forms & Inputs', 
           description: isHe ? 'יוצרים אינטראקציה: איך בונים טופס הרשמה ואוספים מידע מהמשתמש.' : 'Create interactive forms to collect user data.', 
           content: '' 
         },
@@ -371,7 +378,7 @@ HTML היא לא "שפת תכנות" במובן הקלאסי (אין בה חיש
         question: 'מהו ההבדל הוויזואלי בקוד בין תגית פתיחה לתגית סגירה?',
         options: ['תגית פתיחה נכתבת באותיות גדולות (CAPS)', 'אין הבדל, הן נראות אותו דבר', 'בתגית סגירה יש לוכסן (/) לפני שם התגית'],
         correctAnswer: 2, // Changed order
-        explanation: 'תגית סגירה תמיד מכילה לוכסן. למשל: </button>. זה הסימן לדפדפן שהאלמנט נגמר.'
+        explanation: 'תגית סגירה תמיד מכילה לוכסן. למשל: </button>. זה הסימן לדפדפן להבין שהאלמנט נגמר.'
       },
       {
         type: 'code',
@@ -381,6 +388,96 @@ HTML היא לא "שפת תכנות" במובן הקלאסי (אין בה חיש
         description: 'כתוב אלמנט כפתור (`button`) שלם. התחל בתגית פתיחה, כתוב בפנים "התחל", וסיים בתגית סגירה.',
         initialCode: '<!-- כתוב את הקוד שלך כאן -->\n',
         solution: '<button>התחל</button>'
+      }
+    ]
+  },
+  'html-syntax': {
+    title: 'המילון: סימנים ותחביר',
+    content: `
+# בואו נעשה סדר במקלדת
+
+תלמידים רבים מתבלבלים בתחילת הדרך מהסימנים המיוחדים. למה יש שווה (\`=\`)? למה יש גרשיים (\`""\`)? ומתי משתמשים בלוכסן (\`/\`)?
+השיעור הזה הוא המילון שלכם. נפרק כל סימן ונסביר את תפקידו המדויק.
+
+## 1. הסוגריים המשולשים: \`< >\` (המעטפה)
+
+כל פקודה ב-HTML עטופה בסימנים האלו.
+*   **המשמעות:** "דפדפן יקר, שיב לב! זוהי פקודת קוד, לא סתם טקסט".
+*   \`<\` (קטן מ-) מסמן את **התחלת** הפקודה.
+*   \`>\` (גדול מ-) מסמן את **סיום** הפקודה.
+
+**דוגמה:**
+\`<button>\`
+הדפדפן קורא משמאל לימין. הוא רואה \`<\`, נכנס לכוננות קוד, קורא את המילה \`button\`, וברגע שהוא רואה \`>\` הוא מבין: "סיימתי לקרוא את שם הפקודה, עכשיו אני מבצע".
+
+## 2. הלוכסן: \`/\` (התמרור "עצור")
+
+הסימן הזה אומר לדפדפן שמשהו **נגמר**.
+אנחנו משתמשים בו בתגית סגירה.
+
+*   **המיקום:** הוא תמיד מגיע *מיד אחרי* הסוגר הפותח \`<\`.
+*   **המשמעות:** "כאן מסתיים האלמנט שהתחלנו קודם".
+
+**דוגמה:**
+\`</h1>\`
+הדפדפן רואה את זה ומבין: "אוקיי, הכותרת הגדולה שהתחלתי קודם? זהו, נגמרה. לחזור לטקסט רגיל".
+
+## 3. השווה: \`=\` (המחבר)
+
+הסימן הזה משמש אותנו כשאנחנו רוצים לתת **תכונות** (Attributes) לאלמנט.
+תחשבו עליו כמו המילה "הוא" או "שווה ל-".
+
+**דוגמה:**
+\`class="big"\`
+אנחנו אומרים לדפדפן: המזהה (class) של האלמנט הזה **שווה ל-** "big".
+
+## 4. הגרשיים: \`"..."\` (המכולה)
+
+כשאנחנו נותנים ערך לתכונה (כמו בדוגמה למעלה), אנחנו חייבים לעטוף את הערך בגרשיים.
+למה? כדי שהדפדפן ידע איפה הערך מתחיל ואיפה הוא נגמר.
+
+**תראו מה קורה בלי גרשיים:**
+\`<input placeholder=הכנס שם כאן>\`
+הדפדפן יתבלבל! הוא יחשוב שה-placeholder הוא רק המילה "הכנס", ולא יבין מה לעשות עם המילים "שם כאן".
+
+**עם גרשיים זה ברור:**
+\`<input placeholder="הכנס שם כאן">\`
+הדפדפן מבין: "כל מה שנמצא בין הגרשיים שייך ל-placeholder".
+
+---
+
+### סיכום ויזואלי
+
+\`\`\`html
+  <h1   class  =  "title"  >   שלום   </h1>
+  ^       ^    ^     ^     ^     ^      ^
+  1       2    3     4     5     6      7
+\`\`\`
+
+1.  **פתיחת פקודה:** "שים לב דפדפן!"
+2.  **שם התכונה:** "אני רוצה להגדיר את ה-class..."
+3.  **המחבר:** "...שהערך שלו שווה ל..."
+4.  **הערך:** "...title (בתוך גרשיים כדי לשמור עליו מאוחד)"
+5.  **סגירת פקודה:** "סיימתי את ההגדרות, אפשר להתחיל את התוכן."
+6.  **התוכן:** מה שרואים במסך.
+7.  **תגית סגירה:** "זהו, נגמרה הכותרת."
+    `,
+    practice: [
+      {
+        type: 'quiz',
+        id: 'q_syntax_1',
+        question: 'מה תפקידם של הגרשיים (" ") ב-HTML?',
+        options: ['הם נועדו רק ליופי', 'הם מגדירים לדפדפן היכן מתחיל והיכן מסתיים הערך של התכונה', 'הם הופכים את הטקסט למודגש'],
+        correctAnswer: 1,
+        explanation: 'הגרשיים "אורזים" את המידע כדי שהדפדפן ידע שכל מה שבפנים הוא ערך אחד רציף, גם אם יש בו רווחים.'
+      },
+      {
+        type: 'quiz',
+        id: 'q_syntax_2',
+        question: 'היכן ממוקם הלוכסן (/) בתגית סגירה?',
+        options: ['בסוף התגית (למשל `<h1/>`)', 'מייד אחרי הסוגר הפותח (למשל `</h1>`)', 'לא משתמשים בלוכסן ב-HTML'],
+        correctAnswer: 1,
+        explanation: 'בתגית סגירה, הלוכסן תמיד מופיע בהתחלה, ליד ה-<. למשל: `</div>`.'
       }
     ]
   },
@@ -806,6 +903,11 @@ HTML היא לא "שפת תכנות" במובן הקלאסי (אין בה חיש
       }
     ]
   },
+  'css-intro': {
+      title: 'תחביר CSS',
+      content: `# CSS Basics\n\nבקרוב: תוכן על סלקטורים ועיצוב.`,
+      practice: []
+  },
   'css-colors': {
     title: 'צבעים ורקעים',
     content: `
@@ -838,6 +940,26 @@ HTML היא לא "שפת תכנות" במובן הקלאסי (אין בה חיש
       }
     ]
   },
+  'css-boxmodel': {
+      title: 'מודל הקופסה',
+      content: `# Box Model\n\nבקרוב: margin, padding, border.`,
+      practice: []
+  },
+  'css-flexbox': {
+      title: 'Flexbox',
+      content: `# Flexbox\n\nבקרוב: סידור אלמנטים.`,
+      practice: []
+  },
+  'css-grid': {
+      title: 'CSS Grid',
+      content: `# Grid\n\nבקרוב: רשתות.`,
+      practice: []
+  },
+  'js-intro': {
+      title: 'JavaScript Intro',
+      content: `# JS Intro\n\nבקרוב.`,
+      practice: []
+  },
   'js-variables': {
     title: 'משתנים (Variables)',
     content: `
@@ -855,13 +977,82 @@ HTML היא לא "שפת תכנות" במובן הקלאסי (אין בה חיש
         explanation: 'const (constant) משמש להגדרת קבועים.'
       }
     ]
+  },
+  'js-operators': {
+      title: 'Operators',
+      content: `# Operators\n\nבקרוב.`,
+      practice: []
+  },
+  'js-conditions': {
+      title: 'Conditions',
+      content: `# Conditions\n\nבקרוב.`,
+      practice: []
+  },
+  'js-loops': {
+      title: 'Loops',
+      content: `# Loops\n\nבקרוב.`,
+      practice: []
+  },
+  'js-functions': {
+      title: 'Functions',
+      content: `# Functions\n\nבקרוב.`,
+      practice: []
+  },
+  'js-dom': {
+      title: 'DOM',
+      content: `# DOM\n\nבקרוב.`,
+      practice: []
   }
 };
 
 const lessonContentEn: Record<string, {title: string, content: string, practice?: PracticeItem[]}> = {
   'web-intro': {
     title: '1. How the Web Works',
-    content: `...`, // (Truncated for brevity, assuming similar structure logic updates apply to EN)
+    content: `
+# Before writing a single line of code...
+
+We are used to visiting websites like Facebook, Google, or YouTube, but what really happens the moment we press \`Enter\`? To become good developers, we must understand the "behind the scenes".
+
+## Browser, Server, and everything in between
+
+To understand this, let's use a restaurant analogy:
+
+1.  **The Client:** This is you, or more precisely – your computer. You sit at the table and order a dish from the menu (e.g., "I want to see the home page of ynet").
+2.  **The Waiter (The Browser):** The browser (Chrome, Safari, Edge) is the intermediary. It takes your request and runs to the kitchen to get it. It knows how to speak to the kitchen in a special language (HTTP).
+3.  **The Kitchen (The Server):** In a remote place in the world sits a powerful computer that runs 24/7 called a "Server". It stores all the website's files. When the waiter asks, it prepares the dish (web pages, images, data) and sends it back.
+
+When the waiter (browser) comes to your table, he doesn't throw a sack of flour and a carton of eggs at you (the raw code). He serves you a **ready-made, beautiful pizza** (the visual website).
+This is exactly how the browser works: it receives **textual code** from the server, reads it at enormous speed, and "paints" buttons, images, and colors on your screen.
+
+## The Three Pillars of Web Development
+
+Every modern website consists of three main languages. We will use the "Human Body Analogy" to understand them:
+
+### 1. HTML - The Skeleton 🦴
+This is the structural base.
+Without a skeleton, the body would fall to the floor like a jelly bag. HTML defines **what is on the page**:
+*   "Here will be a heading"
+*   "Here will be a paragraph"
+*   "Here will be an image"
+HTML does not determine how things will look (color, size), but only that they **exist**.
+
+### 2. CSS - The Skin & Style 🎨
+This is the design.
+After we have a skeleton, we want it to look good. CSS is responsible for the visibility:
+*   "The heading will be blue"
+*   "The background will be pink"
+*   "The image will be round"
+Without CSS, all websites would look like boring black-and-white Word documents.
+
+### 3. JavaScript - The Brain 🧠
+This is the behavior and interaction.
+A beautiful body and strong skeleton are nice, but we want to move! JS makes things happen:
+*   "What happens when the button is clicked?"
+*   "How do we check if the entered password is correct?"
+*   "How do we show a popup message?"
+
+> **In this course, we will learn these three languages in order: first build a skeleton (HTML), then style it (CSS), and finally breathe life into it (JS).**
+    `,
     practice: [
       {
         type: 'quiz',
@@ -881,18 +1072,31 @@ const lessonContentEn: Record<string, {title: string, content: string, practice?
       }
     ]
   },
-  // ... (Other EN lessons would be similarly updated in a real scenario, keeping it minimal here to fit response)
+  'html-syntax': {
+    title: '3. Dictionary: Symbols & Syntax',
+    content: `# Decoding the Symbols\n\nLearn what <, >, /, and = actually mean in HTML code.`,
+    practice: []
+  }
+  // Fallback for others to simple content
 };
 
 // ... existing export
 export const getLessonContent = (id: string, lang: Language): { title: string; content: string; practice?: PracticeItem[] } => {
   const isHe = lang === 'he';
-  // Note: For EN, I'm just falling back to Hebrew content logic for the new quizzes for now to save space, 
-  // but in a full app I'd duplicate the structure.
-  const repo = isHe ? lessonContentHe : lessonContentHe; 
+  // Corrected logic: Use English repo if not Hebrew
+  const repo = isHe ? lessonContentHe : lessonContentEn; 
 
   if (repo[id]) {
     return repo[id];
+  }
+
+  // Fallback if specific lesson missing in EN, try HE or default
+  if (!isHe && lessonContentHe[id]) {
+      return {
+          ...lessonContentHe[id],
+          title: lessonContentHe[id].title + ' (Hebrew Only)',
+          content: lessonContentHe[id].content + '\n\n> *Note: English translation coming soon.*'
+      }
   }
 
   return {

@@ -27,6 +27,8 @@ export interface TranslationStructure {
     loginWithGoogle: string;
     loginSuccess: string;
     logoutSuccess: string;
+    loginTitle: string;
+    loginSubtitle: string;
   };
   profile: {
     title: string;

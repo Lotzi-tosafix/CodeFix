@@ -97,8 +97,7 @@ const Navbar: React.FC<NavbarProps> = ({ lang, setLang, theme, toggleTheme, t, u
                   className="flex items-center gap-2 ml-4 rtl:mr-4 bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 rounded-full text-sm font-semibold transition-all shadow-lg shadow-brand-500/20"
                 >
                   <LogIn size={16} />
-                  <span className="hidden lg:inline">{t.auth.loginWithGoogle}</span>
-                  <span className="lg:hidden">{t.nav.login}</span>
+                  <span>{t.nav.login}</span>
                 </button>
               )}
             </div>
@@ -160,7 +159,7 @@ const Navbar: React.FC<NavbarProps> = ({ lang, setLang, theme, toggleTheme, t, u
                 ) : (
                     <button onClick={() => {onLogin(); setIsOpen(false)}} className="flex w-full items-center text-start text-brand-600 dark:text-brand-400 hover:text-brand-500 dark:hover:text-brand-300 px-3 py-2 rounded-md text-base font-medium font-bold">
                         <LogIn size={16} className="mr-2 rtl:ml-2 rtl:mr-0" />
-                        {t.auth.loginWithGoogle}
+                        {t.nav.login}
                     </button>
                 )}
             </div>

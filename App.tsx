@@ -9,13 +9,14 @@ import LessonView from './components/LessonView';
 import About from './components/About';
 import ProfileModal from './components/ProfileModal';
 import ChallengeView from './components/ChallengeView';
+import LoginModal from './components/LoginModal';
 import { en, he } from './locales';
 import { Language, User, Theme } from './types';
 import { getCourseData } from './data';
 import { AlertTriangle } from 'lucide-react';
 
 // Firebase Imports
-import { auth, googleProvider, saveUserData, getUserData } from './services/firebase';
+import { auth, googleProvider, githubProvider, saveUserData, getUserData } from './services/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 
 function App() {
@@ -46,6 +47,7 @@ function App() {
   // Auth State
   const [user, setUser] = useState<User | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [showGuestWarning, setShowGuestWarning] = useState(true);
 
@@ -107,11 +109,23 @@ function App() {
   const t = lang === 'he' ? he : en;
   const courseData = getCourseData(t, lang);
 
-  const handleLogin = async () => {
+  const handleOpenLogin = () => {
+    setIsLoginModalOpen(true);
+  };
+
+  const handleGoogleLogin = async () => {
       try {
         await signInWithPopup(auth, googleProvider);
       } catch (error) {
         console.error("Login failed:", error);
+      }
+  };
+
+  const handleGithubLogin = async () => {
+      try {
+        await signInWithPopup(auth, githubProvider);
+      } catch (error) {
+        console.error("GitHub Login failed:", error);
       }
   };
 
@@ -166,7 +180,7 @@ function App() {
                         <p className="text-xs md:text-sm opacity-90">{t.auth.guestWarningDesc}</p>
                     </div>
                     <button 
-                        onClick={handleLogin}
+                        onClick={handleOpenLogin}
                         className="bg-white text-amber-700 px-4 py-1.5 rounded-full text-sm font-bold hover:bg-amber-50 transition-colors whitespace-nowrap"
                     >
                         {t.auth.loginWithGoogle}
@@ -193,6 +207,16 @@ function App() {
             />
         )}
 
+        {/* Login Modal */}
+        {isLoginModalOpen && (
+            <LoginModal 
+                t={t}
+                onClose={() => setIsLoginModalOpen(false)}
+                onGoogleLogin={handleGoogleLogin}
+                onGithubLogin={handleGithubLogin}
+            />
+        )}
+
         {/* Navbar */}
         <Navbar 
             lang={lang} 
@@ -201,7 +225,7 @@ function App() {
             toggleTheme={toggleTheme} 
             t={t} 
             user={user}
-            onLogin={handleLogin}
+            onLogin={handleOpenLogin}
             onOpenProfile={() => setIsProfileOpen(true)}
         />
 
