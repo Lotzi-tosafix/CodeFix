@@ -2,9 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
 import { 
-    initializeFirestore, 
-    persistentLocalCache, 
-    persistentMultipleTabManager,
+    getFirestore,
     doc, 
     setDoc, 
     getDoc, 
@@ -32,13 +30,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// FIX: Initialize Firestore with settings to bypass NetFree/Firewall issues (Force Long Polling)
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  }),
-  experimentalForceLongPolling: true, 
-});
+// Standard Firestore initialization
+export const db = getFirestore(app);
 
 export const googleProvider = new GoogleAuthProvider();
 export const githubProvider = new GithubAuthProvider();
