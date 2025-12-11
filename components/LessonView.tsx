@@ -1,11 +1,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { TranslationStructure, Language, PracticeItem, QuizPractice, CodePractice, Module } from '../types';
-import { ArrowLeft, CheckCircle, ArrowRight, Play, Eye, Code, HelpCircle, Loader2, Lightbulb, Square, Volume2, Trophy } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ArrowRight, Play, Eye, Code, HelpCircle, Loader2, Lightbulb, Square, Volume2, Trophy, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { getLessonContent } from '../data';
 import Editor from "@monaco-editor/react";
 import confetti from 'canvas-confetti';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
+import { auth, voteLesson, getLessonRating } from '../services/firebase';
+import RatingFeedbackModal from './RatingFeedbackModal';
+import { sendFeedbackEmail } from '../services/email';
 
 interface LessonViewProps {
   t: TranslationStructure;
@@ -247,7 +250,21 @@ const LessonView: React.FC<LessonViewProps> = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const mainContentRef = useRef<HTMLDivElement>(null); 
   const [justCompleted, setJustCompleted] = useState(false);
+  
+  // Voting State
+  const [lessonScore, setLessonScore] = useState(0);
+  const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
 
+  useEffect(() => {
+      // Load current rating
+      if (lessonId) {
+        getLessonRating(lessonId).then(score => setLessonScore(score));
+        // Reset user vote local state when lesson changes (in real app, fetch from user profile)
+        setUserVote(null); 
+      }
+  }, [lessonId]);
   
   const quizzes = lessonData.practice?.filter(p => p.type === 'quiz') || [];
   const allQuizzesCompleted = quizzes.length === 0 || quizzes.every(q => completedPracticeItems.includes(q.id));
@@ -273,6 +290,34 @@ const LessonView: React.FC<LessonViewProps> = ({
     if (!completedPracticeItems.includes(id)) {
       setCompletedPracticeItems(prev => [...prev, id]);
     }
+  };
+
+  const handleVote = async (type: 'up' | 'down') => {
+      if (userVote) return; // Already voted
+
+      const userId = auth.currentUser?.uid;
+      const success = await voteLesson(lessonId, type, userId);
+      
+      if (success) {
+          setUserVote(type);
+          setLessonScore(prev => type === 'up' ? prev + 1 : prev - 1);
+          
+          if (type === 'down') {
+              setShowFeedbackModal(true);
+          }
+      }
+  };
+
+  const handleSendFeedback = async (feedbackText: string) => {
+      setIsSendingFeedback(true);
+      try {
+          await sendFeedbackEmail(lessonId, feedbackText, auth.currentUser?.email || undefined);
+          setShowFeedbackModal(false);
+      } catch (e) {
+          console.error("Failed to send feedback", e);
+      } finally {
+          setIsSendingFeedback(false);
+      }
   };
 
   const toggleSpeech = () => {
@@ -363,6 +408,16 @@ const LessonView: React.FC<LessonViewProps> = ({
   return (
     <div className="pt-20 h-screen flex flex-col md:flex-row overflow-hidden bg-slate-50 dark:bg-dark-bg relative transition-colors duration-300">
       
+      {/* Feedback Modal */}
+      {showFeedbackModal && (
+          <RatingFeedbackModal 
+            t={t}
+            isSending={isSendingFeedback}
+            onClose={() => setShowFeedbackModal(false)}
+            onSubmit={handleSendFeedback}
+          />
+      )}
+
       {/* Centered Content */}
       <div 
         ref={mainContentRef}
@@ -439,7 +494,8 @@ const LessonView: React.FC<LessonViewProps> = ({
           </div>
         )}
 
-        <div className="mt-12 mb-20 flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-10 gap-6">
+        {/* Action Bar (Complete & Next) */}
+        <div className="mt-12 mb-10 flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-10 gap-6">
             <div className="flex items-center">
               {isCompleted ? (
                 <div className="flex items-center text-green-600 dark:text-green-400 font-medium bg-green-100 dark:bg-green-900/20 px-4 py-2 rounded-full border border-green-500/20">
@@ -490,6 +546,42 @@ const LessonView: React.FC<LessonViewProps> = ({
               )}
             </div>
         </div>
+
+        {/* Voting Section */}
+        <div className="mb-20 bg-slate-100 dark:bg-slate-800/50 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+             <h3 className="text-slate-500 dark:text-slate-400 font-medium mb-4">{t.lesson.voteTitle}</h3>
+             <div className="flex items-center gap-6">
+                 <button 
+                    onClick={() => handleVote('up')}
+                    disabled={!!userVote}
+                    className={`
+                        flex items-center gap-2 px-6 py-3 rounded-full transition-all duration-300
+                        ${userVote === 'up' 
+                            ? 'bg-green-500 text-white shadow-lg scale-105' 
+                            : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600'}
+                        ${userVote && userVote !== 'up' ? 'opacity-50 cursor-not-allowed' : ''}
+                    `}
+                 >
+                     <ThumbsUp size={20} className={userVote === 'up' ? 'fill-current' : ''} />
+                     <span className="font-bold">{lessonScore > 0 ? `+${lessonScore}` : lessonScore}</span>
+                 </button>
+
+                 <button 
+                    onClick={() => handleVote('down')}
+                    disabled={!!userVote}
+                    className={`
+                         flex items-center gap-2 px-4 py-3 rounded-full transition-all duration-300
+                        ${userVote === 'down' 
+                            ? 'bg-red-500 text-white shadow-lg scale-105' 
+                            : 'bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500'}
+                        ${userVote && userVote !== 'down' ? 'opacity-50 cursor-not-allowed' : ''}
+                    `}
+                 >
+                     <ThumbsDown size={20} className={userVote === 'down' ? 'fill-current' : ''} />
+                 </button>
+             </div>
+        </div>
+
       </div>
     </div>
   );

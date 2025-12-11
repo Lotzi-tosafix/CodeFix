@@ -16,7 +16,7 @@ import { getCourseData } from './data';
 import { AlertTriangle } from 'lucide-react';
 
 // Firebase Imports
-import { auth, googleProvider, githubProvider, saveUserData, getUserData } from './services/firebase';
+import { auth, googleProvider, githubProvider, saveUserData, getUserData, registerUserIfNew } from './services/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 
 function App() {
@@ -57,6 +57,9 @@ function App() {
       if (firebaseUser) {
         // User logged in
         const myAdminEmails = ['y0527148273@gmail.com'];
+
+        // Register user in stats if new
+        await registerUserIfNew(firebaseUser.uid, firebaseUser.email || '');
 
         const newUser: User = {
           id: firebaseUser.uid,
@@ -231,7 +234,7 @@ function App() {
 
         <main className="relative">
             <Routes>
-                <Route path="/" element={<Hero t={t} lang={lang} />} />
+                <Route path="/" element={<Hero t={t} lang={lang} courseData={courseData} />} />
                 <Route path="/curriculum" element={<Curriculum t={t} completedLessons={completedLessons} courseData={courseData} user={user} />} />
                 <Route path="/about" element={<About t={t} />} />
                 

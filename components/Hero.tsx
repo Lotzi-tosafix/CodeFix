@@ -1,17 +1,37 @@
 
-import React from 'react';
-import { ArrowRight, Code, Sparkles, Users, Star } from 'lucide-react';
-import { TranslationStructure, Language } from '../types';
+import React, { useEffect, useState } from 'react';
+import { ArrowRight, Code, Users, ThumbsUp } from 'lucide-react';
+import { TranslationStructure, Language, Module } from '../types';
 import { useNavigate } from 'react-router-dom';
+import { getGlobalStats, GlobalStats } from '../services/firebase';
 
 interface HeroProps {
   t: TranslationStructure;
   lang: Language;
+  courseData: Module[];
 }
 
-const Hero: React.FC<HeroProps> = ({ t, lang }) => {
+const Hero: React.FC<HeroProps> = ({ t, lang, courseData }) => {
   const isRTL = lang === 'he';
   const navigate = useNavigate();
+  const [stats, setStats] = useState<GlobalStats>({ totalScore: 0, totalStudents: 0 });
+
+  useEffect(() => {
+      const fetchStats = async () => {
+          const data = await getGlobalStats();
+          setStats(data);
+      };
+      fetchStats();
+  }, []);
+
+  const formatScore = (num: number) => {
+      if (num >= 1000) {
+          return (num / 1000).toFixed(1) + 'k';
+      }
+      return num;
+  };
+
+  const totalLessons = courseData.reduce((acc, curr) => acc + curr.lessons.length, 0);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
@@ -23,11 +43,6 @@ const Hero: React.FC<HeroProps> = ({ t, lang }) => {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center z-10">
         
-        <div className="inline-flex items-center px-4 py-2 rounded-full border border-brand-500/30 bg-white/50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 text-sm font-medium mb-8 backdrop-blur-sm animate-fade-in-up">
-          <Sparkles size={16} className="mr-2 rtl:ml-2 rtl:mr-0" />
-          <span>CodeFix v1.0</span>
-        </div>
-
         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6 leading-tight">
           {t.hero.titlePrefix} <br className="hidden md:block"/>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-purple-600 dark:from-brand-400 dark:to-purple-500">
@@ -65,21 +80,21 @@ const Hero: React.FC<HeroProps> = ({ t, lang }) => {
             <div className="p-3 bg-brand-100 dark:bg-brand-900/30 rounded-full mb-3 text-brand-600 dark:text-brand-400">
               <Users size={24} />
             </div>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">10k+</h3>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">+{formatScore(stats.totalStudents)}</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm">{t.hero.stats_students}</p>
           </div>
           <div className="flex flex-col items-center">
              <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-full mb-3 text-purple-600 dark:text-purple-400">
               <Code size={24} />
             </div>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">150+</h3>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{totalLessons}</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm">{t.hero.stats_lessons}</p>
           </div>
           <div className="flex flex-col items-center">
              <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-full mb-3 text-yellow-600 dark:text-yellow-400">
-              <Star size={24} />
+              <ThumbsUp size={24} />
             </div>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">4.9/5</h3>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">+{formatScore(stats.totalScore)}</h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm">{t.hero.stats_rating}</p>
           </div>
         </div>

@@ -1,4 +1,5 @@
 
+
 import { TranslationStructure } from './types';
 
 export const en: TranslationStructure = {
@@ -40,7 +41,7 @@ export const en: TranslationStructure = {
     ctaSecondary: "What will I learn?",
     stats_students: "Active Learners",
     stats_lessons: "Interactive Lessons",
-    stats_rating: "5.0 Rating"
+    stats_rating: "Community Likes"
   },
   about: {
     title: "Reinventing How You Learn Code",
@@ -109,7 +110,15 @@ export const en: TranslationStructure = {
     loading: "Loading intelligent content...",
     openAi: "Open AI Tutor",
     readAloud: "Read Lesson",
-    stopReading: "Stop Reading"
+    stopReading: "Stop Reading",
+    voteTitle: "Was this lesson helpful?",
+    voteUp: "Yes",
+    voteDown: "No",
+    feedbackTitle: "Help us improve",
+    feedbackPlaceholder: "Tell us why you didn't like this lesson...",
+    feedbackSend: "Send Feedback",
+    feedbackCancel: "Cancel",
+    feedbackThanks: "Thanks for your feedback!"
   },
   challenge: {
     title: "Final Challenge",
@@ -173,7 +182,7 @@ export const he: TranslationStructure = {
     ctaSecondary: "מה תלמדו באתר?",
     stats_students: "תלמידים רשומים",
     stats_lessons: "שיעורים",
-    stats_rating: "דירוג התלמידים"
+    stats_rating: "לייקים מהקהילה"
   },
   about: {
     title: "ממציאים מחדש את לימוד התכנות",
@@ -242,7 +251,15 @@ export const he: TranslationStructure = {
     loading: "מכין תשובה חכמה...",
     openAi: "פתח צ'אט AI",
     readAloud: "הקרא שיעור",
-    stopReading: "עצור הקראה"
+    stopReading: "עצור הקראה",
+    voteTitle: "השיעור עזר לך?",
+    voteUp: "לייק",
+    voteDown: "דיסלייק",
+    feedbackTitle: "איך נוכל להשתפר?",
+    feedbackPlaceholder: "ספר לנו מה לא אהבת בשיעור...",
+    feedbackSend: "שלח משוב",
+    feedbackCancel: "ביטול",
+    feedbackThanks: "תודה על המשוב!"
   },
   challenge: {
     title: "אתגר הסיום",

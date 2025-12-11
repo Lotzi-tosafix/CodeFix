@@ -119,6 +119,14 @@ export interface TranslationStructure {
     openAi: string;
     readAloud: string;
     stopReading: string;
+    voteTitle: string;
+    voteUp: string;
+    voteDown: string;
+    feedbackTitle: string;
+    feedbackPlaceholder: string;
+    feedbackSend: string;
+    feedbackCancel: string;
+    feedbackThanks: string;
   };
   challenge: {
     title: string;
