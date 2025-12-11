@@ -1,7 +1,22 @@
 
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, runTransaction, collection, addDoc, query, orderBy, getDocs } from "firebase/firestore";
+import { 
+    initializeFirestore, 
+    persistentLocalCache, 
+    persistentMultipleTabManager,
+    doc, 
+    setDoc, 
+    getDoc, 
+    updateDoc, 
+    increment, 
+    runTransaction, 
+    collection, 
+    addDoc, 
+    query, 
+    orderBy, 
+    getDocs 
+} from "firebase/firestore";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -16,39 +31,53 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// FIX: Initialize Firestore with settings to bypass NetFree/Firewall issues (Force Long Polling)
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  }),
+  experimentalForceLongPolling: true, 
+});
+
 export const googleProvider = new GoogleAuthProvider();
 export const githubProvider = new GithubAuthProvider();
 
 // Helper functions for reading/writing user data
 
 // Register user and increment global counter only if new
+// FIX: Reads strictly before Writes
 export const registerUserIfNew = async (userId: string, email: string) => {
     const userRef = doc(db, "users", userId);
     const globalStatsRef = doc(db, "stats", "global");
 
     try {
         await runTransaction(db, async (transaction) => {
+            // Step 1: Perform ALL reads first
             const userSnap = await transaction.get(userRef);
+            const globalStatsSnap = await transaction.get(globalStatsRef);
             
+            // Step 2: Logic & Writes
             if (!userSnap.exists()) {
-                // User doesn't exist, create profile and increment counter
+                // Create user profile
                 transaction.set(userRef, {
                     email: email,
                     completedLessons: [],
                     joinedAt: new Date()
                 });
 
-                // Increment student count
-                transaction.update(globalStatsRef, {
-                    totalStudents: increment(1)
-                });
+                // Update global counter
+                if (!globalStatsSnap.exists()) {
+                     transaction.set(globalStatsRef, { totalStudents: 1, totalScore: 0 });
+                } else {
+                     transaction.update(globalStatsRef, {
+                        totalStudents: increment(1)
+                    });
+                }
             }
         });
     } catch (e) {
         console.error("Transaction failed: ", e);
-        // If global stats doc doesn't exist yet, we might need to create it manually or handle error
-        // For this demo, we assume stats/global exists or is created by the first vote/register
     }
 };
 
@@ -114,6 +143,7 @@ export const getGlobalStats = async (): Promise<GlobalStats> => {
     }
 }
 
+// FIX: Reads strictly before Writes to avoid "Reads must be executed before writes" error
 export const voteLesson = async (lessonId: string, voteType: 'up' | 'down', userId?: string) => {
     const ratingRef = doc(db, "ratings", lessonId);
     const globalStatsRef = doc(db, "stats", "global");
@@ -121,46 +151,62 @@ export const voteLesson = async (lessonId: string, voteType: 'up' | 'down', user
 
     try {
         await runTransaction(db, async (transaction) => {
-            // Check if user already voted (if logged in)
+            // Step 1: Perform ALL reads first
+            let userVoteSnap = null;
             if (userVoteRef) {
-                const userVoteSnap = await transaction.get(userVoteRef);
-                if (userVoteSnap.exists()) {
-                    throw new Error("User already voted");
-                }
+                userVoteSnap = await transaction.get(userVoteRef);
             }
-
-            // Get current lesson rating or init
             const ratingSnap = await transaction.get(ratingRef);
-            if (!ratingSnap.exists()) {
-                transaction.set(ratingRef, { score: 0, likes: 0, dislikes: 0 });
-            }
-
-            // Get global stats or init
             const globalSnap = await transaction.get(globalStatsRef);
-            if (!globalSnap.exists()) {
-                transaction.set(globalStatsRef, { totalScore: 0, totalStudents: 0 });
+
+            // Step 2: Logic checks
+            // If user exists and already voted, stop here (throw error to abort transaction)
+            if (userVoteSnap && userVoteSnap.exists()) {
+                throw new Error("User already voted");
             }
 
+            // Step 3: Perform ALL writes
+            
+            // Update Lesson Rating
+            if (!ratingSnap.exists()) {
+                transaction.set(ratingRef, { 
+                    score: voteType === 'up' ? 1 : -1, 
+                    likes: voteType === 'up' ? 1 : 0, 
+                    dislikes: voteType === 'down' ? 1 : 0 
+                });
+            } else {
+                const change = voteType === 'up' ? 1 : -1;
+                transaction.update(ratingRef, { 
+                    score: increment(change),
+                    likes: voteType === 'up' ? increment(1) : increment(0),
+                    dislikes: voteType === 'down' ? increment(1) : increment(0)
+                });
+            }
+
+            // Update Global Stats
             const change = voteType === 'up' ? 1 : -1;
+            if (!globalSnap.exists()) {
+                transaction.set(globalStatsRef, { 
+                    totalScore: change, 
+                    totalStudents: 0 
+                });
+            } else {
+                transaction.update(globalStatsRef, {
+                    totalScore: increment(change)
+                });
+            }
 
-            // Updates
-            transaction.update(ratingRef, { 
-                score: increment(change),
-                likes: voteType === 'up' ? increment(1) : increment(0),
-                dislikes: voteType === 'down' ? increment(1) : increment(0)
-            });
-
-            transaction.update(globalStatsRef, {
-                totalScore: increment(change)
-            });
-
+            // Record User Vote
             if (userVoteRef) {
                 transaction.set(userVoteRef, { type: voteType, timestamp: new Date() });
             }
         });
         return true;
     } catch (e) {
-        console.error("Vote failed: ", e);
+        // If the error is "User already voted", we can just return false silently or log it
+        if ((e as Error).message !== "User already voted") {
+            console.error("Vote failed: ", e);
+        }
         return false;
     }
 };
