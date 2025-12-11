@@ -15,6 +15,7 @@ export interface TranslationStructure {
     home: string;
     curriculum: string;
     about: string;
+    contact: string;
     getStarted: string;
     language: string;
     login: string;
@@ -76,6 +77,23 @@ export interface TranslationStructure {
     philosophyTitle: string;
     philosophyContent: string;
     cta: string;
+  };
+  contact: {
+    title: string;
+    subtitle: string;
+    form: {
+      name: string;
+      email: string;
+      subject: string;
+      message: string;
+      send: string;
+      sending: string;
+      successTitle: string;
+      successDesc: string;
+      errorTitle: string;
+      errorDesc: string;
+      sendAnother: string;
+    }
   };
   curriculum: {
     title: string;

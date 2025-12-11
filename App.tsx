@@ -7,6 +7,7 @@ import Curriculum from './components/Curriculum';
 import ModuleView from './components/ModuleView';
 import LessonView from './components/LessonView';
 import About from './components/About';
+import Contact from './components/Contact';
 import ProfileModal from './components/ProfileModal';
 import ChallengeView from './components/ChallengeView';
 import LoginModal from './components/LoginModal';
@@ -237,6 +238,7 @@ function App() {
                 <Route path="/" element={<Hero t={t} lang={lang} courseData={courseData} />} />
                 <Route path="/curriculum" element={<Curriculum t={t} completedLessons={completedLessons} courseData={courseData} user={user} />} />
                 <Route path="/about" element={<About t={t} />} />
+                <Route path="/contact" element={<Contact t={t} />} />
                 
                 <Route 
                     path="/course/:courseId" 

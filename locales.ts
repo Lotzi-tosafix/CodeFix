@@ -1,5 +1,4 @@
 
-
 import { TranslationStructure } from './types';
 
 export const en: TranslationStructure = {
@@ -7,6 +6,7 @@ export const en: TranslationStructure = {
     home: "Home",
     curriculum: "Courses",
     about: "About",
+    contact: "Contact",
     getStarted: "Start Coding",
     language: "English",
     login: "Login",
@@ -68,6 +68,23 @@ export const en: TranslationStructure = {
     philosophyTitle: "Our Method",
     philosophyContent: "We believe that coding should be accessible to everyone. The traditional way of learning—watching hours of video lectures—is outdated. At CodeFix, we focus on 'Learning by Doing'. We strip away the complex academic jargon and focus on the skills that actually get you hired.",
     cta: "Ready to start your journey?"
+  },
+  contact: {
+    title: "Get in Touch",
+    subtitle: "Have a question, suggestion, or just want to say hi? We'd love to hear from you.",
+    form: {
+      name: "Your Name",
+      email: "Email Address",
+      subject: "Subject",
+      message: "Message",
+      send: "Send Message",
+      sending: "Sending...",
+      successTitle: "Message Sent!",
+      successDesc: "Thanks for reaching out. We'll get back to you as soon as possible.",
+      errorTitle: "Oops!",
+      errorDesc: "Something went wrong. Please try again later.",
+      sendAnother: "Send Another Message"
+    }
   },
   curriculum: {
     title: "Our Courses",
@@ -148,6 +165,7 @@ export const he: TranslationStructure = {
     home: "ראשי",
     curriculum: "הקורסים",
     about: "אודות",
+    contact: "צור קשר",
     getStarted: "בואו נתחיל",
     language: "עברית",
     login: "התחבר",
@@ -209,6 +227,23 @@ export const he: TranslationStructure = {
     philosophyTitle: "השיטה שלנו",
     philosophyContent: "אנחנו מאמינים שתכנות צריך להיות נגיש לכולם. הדרך המסורתית - צפייה בשעות של הרצאות וידאו - מיושנת. ב-CodeFix אנחנו מתמקדים ב'למידה דרך עשייה'. הסרנו את המילים האקדמיות המפחידות ואנחנו מתמקדים בכישורים שבאמת יעזרו לכם למצוא עבודה.",
     cta: "מוכנים להתחיל את המסע?"
+  },
+  contact: {
+    title: "דברו איתנו",
+    subtitle: "יש לכם שאלה, הצעה או סתם רוצים להגיד היי? אנחנו כאן כדי להקשיב.",
+    form: {
+      name: "שם מלא",
+      email: "כתובת אימייל",
+      subject: "נושא הפנייה",
+      message: "תוכן ההודעה",
+      send: "שלח הודעה",
+      sending: "שולח...",
+      successTitle: "ההודעה נשלחה!",
+      successDesc: "תודה שפנית אלינו. נחזור אליך בהקדם האפשרי.",
+      errorTitle: "אופס!",
+      errorDesc: "משהו השתבש בשליחת ההודעה. נסה שוב מאוחר יותר.",
+      sendAnother: "שלח הודעה נוספת"
+    }
   },
   curriculum: {
     title: "הקורסים שלנו",
