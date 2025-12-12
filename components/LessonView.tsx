@@ -18,16 +18,6 @@ interface LessonViewProps {
   courseData: Module[];
 }
 
-const cleanMarkdownForSpeech = (markdown: string): string => {
-  if (!markdown) return '';
-  return markdown
-    .replace(/```[\s\S]*?```/g, 'Code example.')
-    .replace(/[#*`_\[\]]/g, '') // ניקוי גס של סימני מרקדאון
-    .replace(/>\s?/g, '')
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, 'Image.')
-    .replace(/\n+/g, '. '); // החלפת שורות חדשות בנקודה לעצירה קלה
-};
-
 // Extracted to be reusable in QuizComponent
 const renderInlineMarkdown = (text: string) => {
   if (!text) return null;
@@ -245,11 +235,12 @@ const LessonView: React.FC<LessonViewProps> = ({
   const mainContentRef = useRef<HTMLDivElement>(null); 
   const [justCompleted, setJustCompleted] = useState(false);
   
-  // Audio State
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  // Audio State & Refs
   const [isLoadingVoice, setIsLoadingVoice] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const speechQueue = useRef<string[]>([]); // Queue of sentences to read
+  const isPlayingRef = useRef(false); // To prevent double playback
 
   // Voting State
   const [lessonScore, setLessonScore] = useState(0);
@@ -321,80 +312,114 @@ const LessonView: React.FC<LessonViewProps> = ({
       }
   };
 
-  // Edge TTS Toggle Speech Logic
+  // --- TTS LOGIC START ---
+
+  // 1. Split Text Function
+  const splitTextToSentences = (text: string): string[] => {
+    // Basic Markdown cleaning
+    const clean = text
+      .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+      .replace(/[#*_\[\]]/g, '') // Remove formatting symbols
+      .replace(/>\s?/g, '') // Remove blockquotes
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, 'Image.') // Replace images with text
+      .replace(/\n/g, '. '); // Newlines become dots
+    
+    // Regex to split by punctuation but keep it attached
+    const sentences = clean.match(/[^.?!]+[.?!]+["']?|[^.?!]+$/g) || [];
+    return sentences.map(s => s.trim()).filter(s => s.length > 0);
+  };
+
+  // 2. Play Next in Queue Function
+  const playNextInQueue = async () => {
+    if (speechQueue.current.length === 0) {
+      setIsSpeaking(false);
+      isPlayingRef.current = false;
+      return;
+    }
+
+    isPlayingRef.current = true;
+    const sentence = speechQueue.current.shift(); // Get next sentence
+
+    try {
+      // POST request to Vercel API
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          text: sentence, 
+          lang: lang 
+        }),
+      });
+
+      if (!response.ok) throw new Error('TTS Failed');
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      // When ended, play next
+      audio.onended = () => {
+        URL.revokeObjectURL(url); // Cleanup memory
+        playNextInQueue(); // Recursive call for queue
+      };
+
+      audio.onerror = () => {
+        console.error("Audio Playback Error");
+        playNextInQueue(); // Skip to next
+      };
+
+      await audio.play();
+
+    } catch (error) {
+      console.error("Queue Error:", error);
+      playNextInQueue(); // Try next on error
+    }
+  };
+
+  // 3. Toggle Speech Main Function
   const toggleSpeech = async () => {
-    // If already speaking - pause
+    // Stop if playing
     if (isSpeaking) {
       if (audioRef.current) {
         audioRef.current.pause();
-        // Do not reset current time to 0, so it can resume? 
-        // Instructions said: audioRef.current.currentTime = 0; but normal pause behavior usually resumes.
-        // I will follow instruction to reset if that was implied by "stop", but usually toggle means pause/play.
-        // However, the button says "Stop Reading" in the UI often, implying a reset.
-        // Let's stick to the prompt's provided logic block:
-        audioRef.current.currentTime = 0;
+        audioRef.current = null;
       }
+      speechQueue.current = []; // Clear queue
+      isPlayingRef.current = false;
       setIsSpeaking(false);
+      // window.speechSynthesis.cancel(); // Safety cleanup if browser TTS was used before
       return;
     }
-  
-    // If URL exists, play it
-    if (audioUrl) {
-      if (!audioRef.current) audioRef.current = new Audio(audioUrl);
-      audioRef.current.play();
-      setIsSpeaking(true);
-      
-      audioRef.current.onended = () => setIsSpeaking(false);
-      return;
-    }
-  
-    // Fetch new audio
+
+    // Start Playing
     setIsLoadingVoice(true);
-    try {
-      const textToRead = cleanMarkdownForSpeech(lessonData.content);
-      
-      // Call Vercel API
-      const response = await fetch(`/api/tts?lang=${lang}&text=${encodeURIComponent(textToRead)}`);
-      
-      if (!response.ok) throw new Error('TTS Failed');
-  
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      setAudioUrl(url);
-  
-      // Play
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.play();
-      setIsSpeaking(true);
-  
-      audio.onended = () => setIsSpeaking(false);
-      audio.onerror = () => {
-          setIsSpeaking(false);
-          setIsLoadingVoice(false);
-      };
-  
-    } catch (error) {
-      console.error("TTS Error:", error);
-      alert("Error loading voice. Please try again later.");
-    } finally {
-      setIsLoadingVoice(false);
-    }
+    setIsSpeaking(true);
+
+    // Split and Populate Queue
+    const sentences = splitTextToSentences(lessonData.content);
+    speechQueue.current = sentences;
+
+    setIsLoadingVoice(false);
+    
+    // Kickoff
+    playNextInQueue();
   };
+
+  // --- TTS LOGIC END ---
 
   useEffect(() => {
     setJustCompleted(false);
     setCompletedPracticeItems([]); 
     
-    // Cleanup Audio
+    // Cleanup Audio on Unmount / Lesson Change
     if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
     }
-    if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-        setAudioUrl(null);
-    }
+    speechQueue.current = [];
+    isPlayingRef.current = false;
     setIsSpeaking(false);
     setIsLoadingVoice(false);
 
