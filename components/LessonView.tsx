@@ -331,17 +331,16 @@ const LessonView: React.FC<LessonViewProps> = ({
 
   // 2. Play Next in Queue Function
   const playNextInQueue = async () => {
-    if (speechQueue.current.length === 0) {
+    // Check if stopped or queue empty - use ref for safety
+    if (speechQueue.current.length === 0 || !isPlayingRef.current) {
       setIsSpeaking(false);
       isPlayingRef.current = false;
       return;
     }
 
-    isPlayingRef.current = true;
-    const sentence = speechQueue.current.shift(); // Get next sentence
+    const sentence = speechQueue.current[0]; // Peek at next sentence
 
     try {
-      // POST request to Vercel API
       const response = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -351,13 +350,16 @@ const LessonView: React.FC<LessonViewProps> = ({
         }),
       });
 
-      if (!response.ok) throw new Error('TTS Failed');
+      if (!response.ok) throw new Error(`Server Error: ${response.status}`);
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
 
       const audio = new Audio(url);
       audioRef.current = audio;
+
+      // Only shift on success setup
+      speechQueue.current.shift();
 
       // When ended, play next
       audio.onended = () => {
@@ -367,14 +369,26 @@ const LessonView: React.FC<LessonViewProps> = ({
 
       audio.onerror = () => {
         console.error("Audio Playback Error");
-        playNextInQueue(); // Skip to next
+        URL.revokeObjectURL(url);
+        // On playback error, skip to next immediately
+        speechQueue.current.shift(); 
+        playNextInQueue(); 
       };
 
       await audio.play();
 
     } catch (error) {
-      console.error("Queue Error:", error);
-      playNextInQueue(); // Try next on error
+      console.error("TTS Queue Error:", error);
+      
+      // Prevent infinite loop by shifting the problematic sentence
+      speechQueue.current.shift();
+      
+      // Add Delay before retrying to prevent DDOS-like loop
+      setTimeout(() => {
+          if (isPlayingRef.current) {
+             playNextInQueue();
+          }
+      }, 1500);
     }
   };
 
@@ -389,13 +403,13 @@ const LessonView: React.FC<LessonViewProps> = ({
       speechQueue.current = []; // Clear queue
       isPlayingRef.current = false;
       setIsSpeaking(false);
-      // window.speechSynthesis.cancel(); // Safety cleanup if browser TTS was used before
       return;
     }
 
     // Start Playing
     setIsLoadingVoice(true);
     setIsSpeaking(true);
+    isPlayingRef.current = true; // Set active flag
 
     // Split and Populate Queue
     const sentences = splitTextToSentences(lessonData.content);
