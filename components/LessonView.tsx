@@ -22,15 +22,10 @@ const cleanMarkdownForSpeech = (markdown: string): string => {
   if (!markdown) return '';
   return markdown
     .replace(/```[\s\S]*?```/g, 'Code example.')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/#{1,6}\s?/g, '')
-    .replace(/(\*\*|__)(.*?)\1/g, '$2')
-    .replace(/(\*|_)(.*?)\1/g, '$2')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[#*`_\[\]]/g, '') // ניקוי גס של סימני מרקדאון
     .replace(/>\s?/g, '')
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, 'Image: $1')
-    .replace(/^(\s*-\s|\s*\d+\.\s)/gm, '')
-    .replace(/\n+/g, '. ');
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, 'Image.')
+    .replace(/\n+/g, '. '); // החלפת שורות חדשות בנקודה לעצירה קלה
 };
 
 // Extracted to be reusable in QuizComponent
@@ -247,10 +242,15 @@ const LessonView: React.FC<LessonViewProps> = ({
       : null;
 
   const [completedPracticeItems, setCompletedPracticeItems] = useState<string[]>([]);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const mainContentRef = useRef<HTMLDivElement>(null); 
   const [justCompleted, setJustCompleted] = useState(false);
   
+  // Audio State
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isLoadingVoice, setIsLoadingVoice] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   // Voting State
   const [lessonScore, setLessonScore] = useState(0);
   const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
@@ -261,7 +261,7 @@ const LessonView: React.FC<LessonViewProps> = ({
       // Load current rating
       if (lessonId) {
         getLessonRating(lessonId).then(score => setLessonScore(score));
-        // Reset user vote local state when lesson changes (in real app, fetch from user profile)
+        // Reset user vote local state when lesson changes
         setUserVote(null); 
       }
   }, [lessonId]);
@@ -311,12 +311,8 @@ const LessonView: React.FC<LessonViewProps> = ({
   const handleSendFeedback = async (feedbackText: string) => {
       setIsSendingFeedback(true);
       try {
-          // 1. Save to Database for Admin Dashboard
           await saveLessonFeedback(lessonId, feedbackText, auth.currentUser?.email || undefined);
-
-          // 2. Send Email Notification
           await sendFeedbackEmail(lessonId, feedbackText, auth.currentUser?.email || undefined);
-          
           setShowFeedbackModal(false);
       } catch (e) {
           console.error("Failed to send feedback", e);
@@ -325,21 +321,64 @@ const LessonView: React.FC<LessonViewProps> = ({
       }
   };
 
-  const toggleSpeech = () => {
+  // Edge TTS Toggle Speech Logic
+  const toggleSpeech = async () => {
+    // If already speaking - pause
     if (isSpeaking) {
-      window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        // Do not reset current time to 0, so it can resume? 
+        // Instructions said: audioRef.current.currentTime = 0; but normal pause behavior usually resumes.
+        // I will follow instruction to reset if that was implied by "stop", but usually toggle means pause/play.
+        // However, the button says "Stop Reading" in the UI often, implying a reset.
+        // Let's stick to the prompt's provided logic block:
+        audioRef.current.currentTime = 0;
+      }
       setIsSpeaking(false);
-    } else {
-      const textToRead = cleanMarkdownForSpeech(lessonData.content);
-      const utterance = new SpeechSynthesisUtterance(textToRead);
-      utterance.lang = lang === 'he' ? 'he-IL' : 'en-US';
-      utterance.rate = 1;
-      
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-
-      window.speechSynthesis.speak(utterance);
+      return;
+    }
+  
+    // If URL exists, play it
+    if (audioUrl) {
+      if (!audioRef.current) audioRef.current = new Audio(audioUrl);
+      audioRef.current.play();
       setIsSpeaking(true);
+      
+      audioRef.current.onended = () => setIsSpeaking(false);
+      return;
+    }
+  
+    // Fetch new audio
+    setIsLoadingVoice(true);
+    try {
+      const textToRead = cleanMarkdownForSpeech(lessonData.content);
+      
+      // Call Vercel API
+      const response = await fetch(`/api/tts?lang=${lang}&text=${encodeURIComponent(textToRead)}`);
+      
+      if (!response.ok) throw new Error('TTS Failed');
+  
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setAudioUrl(url);
+  
+      // Play
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.play();
+      setIsSpeaking(true);
+  
+      audio.onended = () => setIsSpeaking(false);
+      audio.onerror = () => {
+          setIsSpeaking(false);
+          setIsLoadingVoice(false);
+      };
+  
+    } catch (error) {
+      console.error("TTS Error:", error);
+      alert("Error loading voice. Please try again later.");
+    } finally {
+      setIsLoadingVoice(false);
     }
   };
 
@@ -347,16 +386,21 @@ const LessonView: React.FC<LessonViewProps> = ({
     setJustCompleted(false);
     setCompletedPracticeItems([]); 
     
-    window.speechSynthesis.cancel();
+    // Cleanup Audio
+    if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+    }
+    if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+        setAudioUrl(null);
+    }
     setIsSpeaking(false);
+    setIsLoadingVoice(false);
 
     if (mainContentRef.current) {
       mainContentRef.current.scrollTop = 0;
     }
-    
-    return () => {
-       window.speechSynthesis.cancel();
-    };
   }, [lessonId]);
 
   const renderMarkdown = (content: string) => {
@@ -439,9 +483,15 @@ const LessonView: React.FC<LessonViewProps> = ({
 
             <button
                 onClick={toggleSpeech}
+                disabled={isLoadingVoice}
                 className={`flex items-center px-4 py-2 rounded-full font-medium transition-all duration-300 ${isSpeaking ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-700'}`}
             >
-                {isSpeaking ? (
+                {isLoadingVoice ? (
+                    <>
+                        <Loader2 className="animate-spin mr-2 rtl:ml-2 rtl:mr-0" size={18} />
+                        Generating Audio...
+                    </>
+                ) : isSpeaking ? (
                     <>
                         <Square size={16} fill="currentColor" className="mr-2 rtl:ml-2 rtl:mr-0 animate-pulse" />
                         {t.lesson.stopReading}
