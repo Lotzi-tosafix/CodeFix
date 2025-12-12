@@ -241,7 +241,6 @@ const LessonView: React.FC<LessonViewProps> = ({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const speechQueue = useRef<string[]>([]); // Queue of sentences to read
   const isPlayingRef = useRef(false); // To prevent double playback
-  const errorCountRef = useRef(0); // ERROR COUNTER
 
   // Voting State
   const [lessonScore, setLessonScore] = useState(0);
@@ -330,16 +329,11 @@ const LessonView: React.FC<LessonViewProps> = ({
     return sentences.map(s => s.trim()).filter(s => s.length > 0);
   };
 
-  // 2. Play Next in Queue Function - WITH ERROR HANDLING
+  // 2. Play Next in Queue Function
   const playNextInQueue = async () => {
-    if (speechQueue.current.length === 0 || errorCountRef.current > 3) {
-      if (errorCountRef.current > 3) {
-          console.error("Too many errors, stopping TTS.");
-          alert("Audio system encountered connection issues.");
-      }
+    if (speechQueue.current.length === 0) {
       setIsSpeaking(false);
       isPlayingRef.current = false;
-      errorCountRef.current = 0;
       return;
     }
 
@@ -357,10 +351,7 @@ const LessonView: React.FC<LessonViewProps> = ({
         }),
       });
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`TTS Failed: ${response.status} - ${errText}`);
-      }
+      if (!response.ok) throw new Error('TTS Failed');
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -371,13 +362,11 @@ const LessonView: React.FC<LessonViewProps> = ({
       // When ended, play next
       audio.onended = () => {
         URL.revokeObjectURL(url); // Cleanup memory
-        errorCountRef.current = 0; // Reset errors on success
         playNextInQueue(); // Recursive call for queue
       };
 
       audio.onerror = () => {
         console.error("Audio Playback Error");
-        errorCountRef.current++;
         playNextInQueue(); // Skip to next
       };
 
@@ -385,11 +374,7 @@ const LessonView: React.FC<LessonViewProps> = ({
 
     } catch (error) {
       console.error("Queue Error:", error);
-      errorCountRef.current++;
-      // DELAY RETRY to prevent DDOS loop
-      setTimeout(() => {
-          playNextInQueue();
-      }, 1000);
+      playNextInQueue(); // Try next on error
     }
   };
 
@@ -404,7 +389,7 @@ const LessonView: React.FC<LessonViewProps> = ({
       speechQueue.current = []; // Clear queue
       isPlayingRef.current = false;
       setIsSpeaking(false);
-      errorCountRef.current = 0;
+      // window.speechSynthesis.cancel(); // Safety cleanup if browser TTS was used before
       return;
     }
 
