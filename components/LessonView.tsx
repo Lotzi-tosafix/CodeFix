@@ -239,10 +239,6 @@ const LessonView: React.FC<LessonViewProps> = ({
   const [isLoadingVoice, setIsLoadingVoice] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const speechQueue = useRef<string[]>([]); // Queue of sentences to read
-  const isPlayingRef = useRef(false); // To prevent double playback
-
-  const TTS_SERVER_URL = "https://edge-tts-server-tfx.onrender.com/tts";
 
   // Voting State
   const [lessonScore, setLessonScore] = useState(0);
@@ -343,127 +339,187 @@ const LessonView: React.FC<LessonViewProps> = ({
       }
   };
 
-  // --- RENDER TTS LOGIC ---
+   // --- SMART TTS LOGIC START ---
 
-  // 1. Split Text Function
+  // 1. Text Splitter (Improved)
   const splitTextToSentences = (text: string): string[] => {
-    // Basic Markdown cleaning
     const clean = text
-      .replace(/```[\s\S]*?```/g, '') // Remove code blocks
-      .replace(/[#*_\[\]]/g, '') // Remove formatting symbols
-      .replace(/>\s?/g, '') // Remove blockquotes
-      .replace(/!\[([^\]]*)\]\([^)]+\)/g, 'Image.') // Replace images with text
-      .replace(/\n/g, '. '); // Newlines become dots
-    
-    // Regex to split by punctuation but keep it attached
-    const sentences = clean.match(/[^.?!]+[.?!]+["']?|[^.?!]+$/g) || [];
-    return sentences.map(s => s.trim()).filter(s => s.length > 0);
+      .replace(/```[\s\S]*?```/g, ' קוד דוגמה. ') // Replace code blocks
+      .replace(/[*_\[\]`]/g, '') // Remove formatting symbols
+      .replace(/>/g, '')
+      .replace(/!\[.*?\]\(.*?\)/g, '') // Remove images
+      .replace(/\n+/g, '. '); // Newlines to dots
+
+    // Split smarter, keeping punctuation
+    return clean
+      .match(/[^.?!]+[.?!]+["']?|[^.?!]+$/g) || []
+      .map(s => s.trim())
+      .filter(s => s.length > 2); // Filter out very short segments
   };
 
-  // 2. Play Next in Queue Function
-  const playNextInQueue = async () => {
-    // Check if stopped or queue empty - use ref for safety
-    if (speechQueue.current.length === 0 || !isPlayingRef.current) {
-      setIsSpeaking(false);
-      isPlayingRef.current = false;
-      return;
-    }
+  // State Management via Refs to avoid re-renders
+  const audioCache = useRef<Map<number, string>>(new Map()); // Store ObjectURLs
+  const playingIndex = useRef<number>(-1); // Current playing index
+  const allSentences = useRef<string[]>([]); // All lesson sentences
 
-    const sentence = speechQueue.current[0]; // Peek at next sentence
+  // Pre-fetch Audio Function
+  const fetchAudio = async (index: number) => {
+    if (index >= allSentences.current.length || audioCache.current.has(index)) return;
+    
+    // Mark as pending
+    audioCache.current.set(index, 'pending');
 
     try {
-      // Use External Render Server
+      const sentence = allSentences.current[index];
+      const TTS_SERVER_URL = "https://edge-tts-server-tfx.onrender.com/tts";
+
       const response = await fetch(TTS_SERVER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text: sentence, 
-          lang: lang 
-        }),
+        body: JSON.stringify({ text: sentence, lang: lang }),
       });
 
-      if (!response.ok) throw new Error(`Server Error: ${response.status}`);
+      if (!response.ok) throw new Error('Server Error');
 
       const blob = await response.blob();
+      // If blob is empty or too small
+      if (blob.size < 100) {
+          audioCache.current.set(index, 'skip'); 
+          return;
+      }
+
       const url = URL.createObjectURL(blob);
-
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      // Only shift on success setup
-      speechQueue.current.shift();
-
-      // When ended, play next
-      audio.onended = () => {
-        URL.revokeObjectURL(url); // Cleanup memory
-        playNextInQueue(); // Recursive call for queue
-      };
-
-      audio.onerror = () => {
-        console.error("Audio Playback Error");
-        URL.revokeObjectURL(url);
-        // On playback error, skip to next immediately
-        speechQueue.current.shift(); 
-        playNextInQueue(); 
-      };
-
-      await audio.play();
+      audioCache.current.set(index, url);
 
     } catch (error) {
-      console.error("TTS Queue Error:", error);
-      
-      // Prevent infinite loop by shifting the problematic sentence
-      speechQueue.current.shift();
-      
-      // Add Delay before retrying
-      setTimeout(() => {
-          if (isPlayingRef.current) {
-             playNextInQueue();
-          }
-      }, 1000);
+      console.error(`Failed to fetch index ${index}`, error);
+      audioCache.current.delete(index); // Delete so we can retry if needed
     }
   };
 
-  // 3. Toggle Speech Main Function
+  // Main Playback Function
+  const playNext = async () => {
+    if (!isSpeaking) return;
+
+    const nextIndex = playingIndex.current + 1;
+
+    // 1. Check if finished
+    if (nextIndex >= allSentences.current.length) {
+      setIsSpeaking(false);
+      playingIndex.current = -1;
+      return;
+    }
+
+    playingIndex.current = nextIndex;
+
+    // 2. Buffering: Always pre-fetch next 3
+    [1, 2, 3].forEach(offset => fetchAudio(nextIndex + offset));
+
+    // 3. Try to play current
+    const checkAndPlay = async () => {
+        let url = audioCache.current.get(nextIndex);
+
+        // Wait if pending
+        while (url === 'pending') {
+            await new Promise(r => setTimeout(r, 100)); // Check every 100ms
+            url = audioCache.current.get(nextIndex);
+            if (!isSpeaking) return; // Stop if user cancelled
+        }
+
+        // Skip if error or empty
+        if (!url || url === 'skip') {
+            playNext(); 
+            return;
+        }
+
+        // Play
+        if (audioRef.current) {
+            audioRef.current.src = url;
+            audioRef.current.play().catch(e => {
+                console.error("Play error", e);
+                playNext();
+            });
+            
+            // On end, play next
+            audioRef.current.onended = () => {
+                // Don't revoke immediately to allow replay/backtracking if implemented later, 
+                // but for now we clean up in useEffect.
+                playNext();
+            };
+        }
+    };
+
+    // If current sentence hasn't even started fetching (rare)
+    if (!audioCache.current.has(nextIndex)) {
+        setIsLoadingVoice(true); 
+        await fetchAudio(nextIndex);
+        setIsLoadingVoice(false);
+    }
+
+    checkAndPlay();
+  };
+
   const toggleSpeech = async () => {
-    // Stop if playing
+    // Stop
     if (isSpeaking) {
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current = null;
+        audioRef.current.currentTime = 0;
       }
-      speechQueue.current = []; // Clear queue
-      isPlayingRef.current = false;
       setIsSpeaking(false);
       return;
     }
 
-    // Start Playing
-    setIsLoadingVoice(true);
+    // Start
     setIsSpeaking(true);
-    isPlayingRef.current = true; // Set active flag
+    setIsLoadingVoice(true);
 
-    // Split and Populate Queue
-    const sentences = splitTextToSentences(lessonData.content);
-    speechQueue.current = sentences;
+    // Initialize sentences if needed
+    if (allSentences.current.length === 0) {
+        allSentences.current = splitTextToSentences(lessonData.content);
+        audioCache.current.clear();
+        playingIndex.current = -1;
+    }
+
+    // Resume or Restart
+    if (playingIndex.current >= allSentences.current.length - 1) {
+        playingIndex.current = -1;
+    }
+
+    // Initial pre-fetch
+    await Promise.all([
+        fetchAudio(playingIndex.current + 1),
+        fetchAudio(playingIndex.current + 2),
+        fetchAudio(playingIndex.current + 3)
+    ]);
 
     setIsLoadingVoice(false);
     
-    // Kickoff
-    playNextInQueue();
+    if (!audioRef.current) {
+        audioRef.current = new Audio();
+    }
+
+    playNext();
   };
+
+  // --- SMART TTS LOGIC END ---
 
   useEffect(() => {
     setJustCompleted(false);
     setCompletedPracticeItems([]); 
     
-    // Cleanup Audio on Unmount / Lesson Change
+    // Cleanup TTS
+    allSentences.current = [];
+    audioCache.current.forEach(url => {
+        if (url !== 'pending' && url !== 'skip') URL.revokeObjectURL(url);
+    });
+    audioCache.current.clear();
+    playingIndex.current = -1;
+    
     if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
     }
-    speechQueue.current = [];
-    isPlayingRef.current = false;
     setIsSpeaking(false);
     setIsLoadingVoice(false);
 
