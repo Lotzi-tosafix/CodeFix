@@ -235,15 +235,6 @@ const LessonView: React.FC<LessonViewProps> = ({
   const mainContentRef = useRef<HTMLDivElement>(null); 
   const [justCompleted, setJustCompleted] = useState(false);
   
-  // Audio State & Refs
-  const [isLoadingVoice, setIsLoadingVoice] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const speechQueue = useRef<string[]>([]); // Queue of sentences to read
-  const isPlayingRef = useRef(false); // To prevent double playback
-
-  const TTS_SERVER_URL = "https://edge-tts-server-tfx.onrender.com/tts";
-
   // Voting State
   const [lessonScore, setLessonScore] = useState(0);
   const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
@@ -343,134 +334,166 @@ const LessonView: React.FC<LessonViewProps> = ({
       }
   };
 
-  // --- RENDER TTS LOGIC ---
+   // --- ROBUST TTS LOGIC START ---
 
-  // 1. Split Text Function
+  // 1. Text Splitter - יציב ומסנן תווים בעייתיים
   const splitTextToSentences = (text: string): string[] => {
-    // Basic Markdown cleaning
+    if (!text) return [];
     const clean = text
-      .replace(/```[\s\S]*?```/g, '') // Remove code blocks
-      .replace(/[#*_\[\]]/g, '') // Remove formatting symbols
-      .replace(/>\s?/g, '') // Remove blockquotes
-      .replace(/!\[([^\]]*)\]\([^)]+\)/g, 'Image.') // Replace images with text
-      .replace(/\n/g, '. '); // Newlines become dots
-    
-    // Regex to split by punctuation but keep it attached
-    const sentences = clean.match(/[^.?!]+[.?!]+["']?|[^.?!]+$/g) || [];
-    return sentences.map(s => s.trim()).filter(s => s.length > 0);
+      .replace(/```[\s\S]*?```/g, ' קוד דוגמה. ')
+      .replace(/[*_\[\]`]/g, '') 
+      .replace(/>/g, '')
+      .replace(/!\[.*?\]\(.*?\)/g, '')
+      .replace(/\n+/g, '. ');
+
+    // פיצול לפי סימני פיסוק ושמירה על משפטים הגיוניים
+    return clean
+      .match(/[^.?!]+[.?!]+["']?|[^.?!]+$/g) || []
+      .map(s => s.trim())
+      .filter(s => s.length > 2); // סינון רעשים
   };
 
-  // 2. Play Next in Queue Function
-  const playNextInQueue = async () => {
-    // Check if stopped or queue empty - use ref for safety
-    if (speechQueue.current.length === 0 || !isPlayingRef.current) {
-      setIsSpeaking(false);
-      isPlayingRef.current = false;
-      return;
-    }
+  // State & Refs
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [loadingAudio, setLoadingAudio] = useState(false);
+  
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const sentencesRef = useRef<string[]>([]);
+  const currentIndexRef = useRef<number>(0);
+  const audioCache = useRef<Map<number, string>>(new Map());
 
-    const sentence = speechQueue.current[0]; // Peek at next sentence
+  // פונקציה להבאת אודיו (מורידה ושומרת בזיכרון)
+  const preFetchAudio = async (index: number) => {
+    // אם חורג מהגבולות או כבר קיים במטמון - לא לעשות כלום
+    if (index >= sentencesRef.current.length || audioCache.current.has(index)) return;
 
     try {
-      // Use External Render Server
+      const sentence = sentencesRef.current[index];
+      const TTS_SERVER_URL = "https://edge-tts-server-tfx.onrender.com/tts"; // הכתובת שלך
+
       const response = await fetch(TTS_SERVER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text: sentence, 
-          lang: lang 
-        }),
+        body: JSON.stringify({ text: sentence, lang: lang }),
       });
 
-      if (!response.ok) throw new Error(`Server Error: ${response.status}`);
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      // Only shift on success setup
-      speechQueue.current.shift();
-
-      // When ended, play next
-      audio.onended = () => {
-        URL.revokeObjectURL(url); // Cleanup memory
-        playNextInQueue(); // Recursive call for queue
-      };
-
-      audio.onerror = () => {
-        console.error("Audio Playback Error");
-        URL.revokeObjectURL(url);
-        // On playback error, skip to next immediately
-        speechQueue.current.shift(); 
-        playNextInQueue(); 
-      };
-
-      await audio.play();
-
-    } catch (error) {
-      console.error("TTS Queue Error:", error);
-      
-      // Prevent infinite loop by shifting the problematic sentence
-      speechQueue.current.shift();
-      
-      // Add Delay before retrying
-      setTimeout(() => {
-          if (isPlayingRef.current) {
-             playNextInQueue();
-          }
-      }, 1000);
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size > 100) {
+            const url = URL.createObjectURL(blob);
+            audioCache.current.set(index, url);
+        }
+      }
+    } catch (e) {
+      console.warn(`Failed to pre-fetch sentence ${index}`);
     }
   };
 
-  // 3. Toggle Speech Main Function
-  const toggleSpeech = async () => {
-    // Stop if playing
-    if (isSpeaking) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      speechQueue.current = []; // Clear queue
-      isPlayingRef.current = false;
-      setIsSpeaking(false);
+  // פונקציית הניגון הרקורסיבית
+  const playSequence = async (index: number) => {
+    // תנאי עצירה: אם המשתמש עצר או שנגמרו המשפטים
+    if (!audioRef.current || index >= sentencesRef.current.length) {
+      stopPlayback();
       return;
     }
 
-    // Start Playing
-    setIsLoadingVoice(true);
-    setIsSpeaking(true);
-    isPlayingRef.current = true; // Set active flag
+    currentIndexRef.current = index;
+    setLoadingAudio(true);
 
-    // Split and Populate Queue
-    const sentences = splitTextToSentences(lessonData.content);
-    speechQueue.current = sentences;
+    // 1. ניסיון להשיג את ה-URL (מהמטמון או מהרשת)
+    let url = audioCache.current.get(index);
 
-    setIsLoadingVoice(false);
-    
-    // Kickoff
-    playNextInQueue();
+    if (!url) {
+      // אם אין במטמון, נוריד עכשיו (המשתמש יחכה שניה, זה בסדר)
+      await preFetchAudio(index);
+      url = audioCache.current.get(index);
+    }
+
+    setLoadingAudio(false);
+
+    // אם עדיין אין URL (תקלה בשרת), נדלג לבא
+    if (!url) {
+      playSequence(index + 1);
+      return;
+    }
+
+    // 2. ניגון
+    if (audioRef.current) {
+        audioRef.current.src = url;
+        
+        // ** הטריק לרצף: **
+        // ברגע שהתחלנו לנגן את הנוכחי, נתחיל להוריד את הבא ברקע!
+        preFetchAudio(index + 1);
+
+        audioRef.current.play()
+          .then(() => {
+             // כשהניגון התחיל בהצלחה - נרשום אירוע לסיום
+             if(audioRef.current) {
+                 audioRef.current.onended = () => {
+                     // שחרור זיכרון של המשפט שנגמר (אופציונלי, חוסך RAM)
+                     // URL.revokeObjectURL(url); 
+                     playSequence(index + 1); // המשיך למשפט הבא
+                 };
+             }
+          })
+          .catch(err => {
+             console.error("Playback failed:", err);
+             playSequence(index + 1); // נסה לדלג במקרה שגיאה
+          });
+    }
   };
 
-  useEffect(() => {
-    setJustCompleted(false);
-    setCompletedPracticeItems([]); 
-    
-    // Cleanup Audio on Unmount / Lesson Change
+  const stopPlayback = () => {
     if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      // הסרת המאזין כדי שלא יקפוץ לבא בטעות
+      audioRef.current.onended = null;
     }
-    speechQueue.current = [];
-    isPlayingRef.current = false;
-    setIsSpeaking(false);
-    setIsLoadingVoice(false);
+    setIsPlaying(false);
+    setLoadingAudio(false);
+  };
 
-    if (mainContentRef.current) {
-      mainContentRef.current.scrollTop = 0;
+  const toggleSpeech = async () => {
+    if (isPlaying) {
+      stopPlayback();
+      return;
     }
+
+    // אתחול
+    setIsPlaying(true);
+    
+    // אם זו התחלה חדשה או שהרשימה ריקה
+    if (sentencesRef.current.length === 0 || currentIndexRef.current >= sentencesRef.current.length) {
+        sentencesRef.current = splitTextToSentences(lessonData.content);
+        currentIndexRef.current = 0;
+        audioCache.current.clear();
+    }
+
+    // יצירת אלמנט אודיו אם לא קיים
+    if (!audioRef.current) {
+        audioRef.current = new Audio();
+    }
+
+    // התחלת השרשרת
+    playSequence(currentIndexRef.current);
+  };
+
+  // ניקוי ביציאה מהעמוד
+  useEffect(() => {
+    // איפוס מלא במעבר שיעור
+    stopPlayback();
+    sentencesRef.current = [];
+    audioCache.current.forEach(url => URL.revokeObjectURL(url));
+    audioCache.current.clear();
+    currentIndexRef.current = 0;
+
+    return () => {
+      stopPlayback();
+    };
   }, [lessonId]);
+
+  // --- ROBUST TTS LOGIC END ---
 
   const renderMarkdown = (content: string) => {
     if (!content) return null;
@@ -552,15 +575,15 @@ const LessonView: React.FC<LessonViewProps> = ({
 
             <button
                 onClick={toggleSpeech}
-                disabled={isLoadingVoice}
-                className={`flex items-center px-4 py-2 rounded-full font-medium transition-all duration-300 ${isSpeaking ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-700'}`}
+                disabled={loadingAudio && !isPlaying}
+                className={`flex items-center px-4 py-2 rounded-full font-medium transition-all duration-300 ${isPlaying ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-700'}`}
             >
-                {isLoadingVoice ? (
+                {loadingAudio && !isPlaying ? (
                     <>
                         <Loader2 className="animate-spin mr-2 rtl:ml-2 rtl:mr-0" size={18} />
                         Loading Audio...
                     </>
-                ) : isSpeaking ? (
+                ) : isPlaying ? (
                     <>
                         <Square size={16} fill="currentColor" className="mr-2 rtl:ml-2 rtl:mr-0 animate-pulse" />
                         {t.lesson.stopReading}
