@@ -405,6 +405,7 @@ const LessonView: React.FC<LessonViewProps> = ({
 
     // 1. Check if finished
     if (nextIndex >= allSentences.current.length) {
+      console.log("Finished all sentences");
       setIsSpeaking(false);
       playingIndex.current = -1;
       return;
@@ -415,37 +416,59 @@ const LessonView: React.FC<LessonViewProps> = ({
     // 2. Buffering: Always pre-fetch next 3
     [1, 2, 3].forEach(offset => fetchAudio(nextIndex + offset));
 
-    // 3. Try to play current
+    // 3. Logic to wait for audio and play
     const checkAndPlay = async () => {
         let url = audioCache.current.get(nextIndex);
+        let attempts = 0;
 
-        // Wait if pending
-        while (url === 'pending') {
+        // Wait for audio to load (up to 10 seconds)
+        while (url === 'pending' && attempts < 100) {
             await new Promise(r => setTimeout(r, 100)); // Check every 100ms
             url = audioCache.current.get(nextIndex);
             if (!isSpeaking) return; // Stop if user cancelled
+            attempts++;
         }
 
         // Skip if error or empty
-        if (!url || url === 'skip') {
+        if (!url || url === 'skip' || url === 'pending') {
+            console.warn(`Skipping index ${nextIndex} (Url: ${url})`);
             playNext(); 
             return;
         }
 
-        // Play
-        if (audioRef.current) {
-            audioRef.current.src = url;
-            audioRef.current.play().catch(e => {
-                console.error("Play error", e);
-                playNext();
-            });
+        // --- CORE FIX HERE ---
+        // Create new Audio instance for each sentence to prevent loading issues
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        
+        // Set playback rate (optional, default is 1.0)
+        audio.playbackRate = 1.0; 
+
+        // Handle playback end
+        audio.onended = () => {
+            console.log(`Finished playing index ${nextIndex}`);
+            // Revoke memory for very old sentences
+            const oldUrl = audioCache.current.get(nextIndex - 2);
+            if (oldUrl && oldUrl !== 'skip') URL.revokeObjectURL(oldUrl);
             
-            // On end, play next
-            audioRef.current.onended = () => {
-                // Don't revoke immediately to allow replay/backtracking if implemented later, 
-                // but for now we clean up in useEffect.
-                playNext();
-            };
+            playNext();
+        };
+
+        // Handle playback errors
+        audio.onerror = (e) => {
+            console.error("Audio Element Error:", e, audio.error);
+            playNext(); // Try next
+        };
+
+        // Try to play
+        try {
+            await audio.play();
+            console.log(`Playing index ${nextIndex}...`);
+        } catch (e) {
+            console.error("Browser blocked autoplay or codec error:", e);
+            // If blocked, stop to prevent crazy loops
+            setIsSpeaking(false);
+            alert("הדפדפן חסם את ההקראה האוטומטית. אנא לחץ שוב על הכפתור.");
         }
     };
 
@@ -464,13 +487,14 @@ const LessonView: React.FC<LessonViewProps> = ({
     if (isSpeaking) {
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+        audioRef.current = null;
       }
       setIsSpeaking(false);
       return;
     }
 
     // Start
+    console.log("Starting speech...");
     setIsSpeaking(true);
     setIsLoadingVoice(true);
 
@@ -479,6 +503,7 @@ const LessonView: React.FC<LessonViewProps> = ({
         allSentences.current = splitTextToSentences(lessonData.content);
         audioCache.current.clear();
         playingIndex.current = -1;
+        console.log("Sentences prepared:", allSentences.current.length);
     }
 
     // Resume or Restart
@@ -487,18 +512,9 @@ const LessonView: React.FC<LessonViewProps> = ({
     }
 
     // Initial pre-fetch
-    await Promise.all([
-        fetchAudio(playingIndex.current + 1),
-        fetchAudio(playingIndex.current + 2),
-        fetchAudio(playingIndex.current + 3)
-    ]);
+    await fetchAudio(playingIndex.current + 1);
 
     setIsLoadingVoice(false);
-    
-    if (!audioRef.current) {
-        audioRef.current = new Audio();
-    }
-
     playNext();
   };
 
@@ -509,23 +525,16 @@ const LessonView: React.FC<LessonViewProps> = ({
     setCompletedPracticeItems([]); 
     
     // Cleanup TTS
-    allSentences.current = [];
-    audioCache.current.forEach(url => {
-        if (url !== 'pending' && url !== 'skip') URL.revokeObjectURL(url);
-    });
-    audioCache.current.clear();
-    playingIndex.current = -1;
-    
-    if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-    }
-    setIsSpeaking(false);
-    setIsLoadingVoice(false);
-
-    if (mainContentRef.current) {
-      mainContentRef.current.scrollTop = 0;
-    }
+    return () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+        }
+        // Memory Cleanup
+        audioCache.current.forEach(url => {
+            if (url && url !== 'pending' && url !== 'skip') URL.revokeObjectURL(url);
+        });
+    };
   }, [lessonId]);
 
   const renderMarkdown = (content: string) => {
