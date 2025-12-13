@@ -236,10 +236,13 @@ const LessonView: React.FC<LessonViewProps> = ({
   const [justCompleted, setJustCompleted] = useState(false);
   
   // Audio State & Refs
+  const [isLoadingVoice, setIsLoadingVoice] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const sentenceQueueRef = useRef<string[]>([]);
-  const currentSentenceIndexRef = useRef(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const speechQueue = useRef<string[]>([]); // Queue of sentences to read
+  const isPlayingRef = useRef(false); // To prevent double playback
+
+  const TTS_SERVER_URL = "https://edge-tts-server-tfx.onrender.com/tts";
 
   // Voting State
   const [lessonScore, setLessonScore] = useState(0);
@@ -340,86 +343,132 @@ const LessonView: React.FC<LessonViewProps> = ({
       }
   };
 
-  // --- WEB SPEECH API LOGIC ---
+  // --- RENDER TTS LOGIC ---
 
-  const stopSpeaking = () => {
-      window.speechSynthesis.cancel();
+  // 1. Split Text Function
+  const splitTextToSentences = (text: string): string[] => {
+    // Basic Markdown cleaning
+    const clean = text
+      .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+      .replace(/[#*_\[\]]/g, '') // Remove formatting symbols
+      .replace(/>\s?/g, '') // Remove blockquotes
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, 'Image.') // Replace images with text
+      .replace(/\n/g, '. '); // Newlines become dots
+    
+    // Regex to split by punctuation but keep it attached
+    const sentences = clean.match(/[^.?!]+[.?!]+["']?|[^.?!]+$/g) || [];
+    return sentences.map(s => s.trim()).filter(s => s.length > 0);
+  };
+
+  // 2. Play Next in Queue Function
+  const playNextInQueue = async () => {
+    // Check if stopped or queue empty - use ref for safety
+    if (speechQueue.current.length === 0 || !isPlayingRef.current) {
       setIsSpeaking(false);
-      sentenceQueueRef.current = [];
-      currentSentenceIndexRef.current = 0;
-  };
+      isPlayingRef.current = false;
+      return;
+    }
 
-  const speakNextSentence = () => {
-      if (!isSpeaking || currentSentenceIndexRef.current >= sentenceQueueRef.current.length) {
-          setIsSpeaking(false);
-          return;
-      }
+    const sentence = speechQueue.current[0]; // Peek at next sentence
 
-      const text = sentenceQueueRef.current[currentSentenceIndexRef.current];
-      const utterance = new SpeechSynthesisUtterance(text);
+    try {
+      // Use External Render Server
+      const response = await fetch(TTS_SERVER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          text: sentence, 
+          lang: lang 
+        }),
+      });
+
+      if (!response.ok) throw new Error(`Server Error: ${response.status}`);
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      // Only shift on success setup
+      speechQueue.current.shift();
+
+      // When ended, play next
+      audio.onended = () => {
+        URL.revokeObjectURL(url); // Cleanup memory
+        playNextInQueue(); // Recursive call for queue
+      };
+
+      audio.onerror = () => {
+        console.error("Audio Playback Error");
+        URL.revokeObjectURL(url);
+        // On playback error, skip to next immediately
+        speechQueue.current.shift(); 
+        playNextInQueue(); 
+      };
+
+      await audio.play();
+
+    } catch (error) {
+      console.error("TTS Queue Error:", error);
       
-      // Select Language
-      utterance.lang = lang === 'he' ? 'he-IL' : 'en-US';
-      utterance.rate = 1; // Speed
-      utterance.pitch = 1;
-
-      // Select Voice (Optional - Browser will default)
-      // We can try to find a Hebrew voice if lang is HE
-      if (lang === 'he') {
-          const voices = window.speechSynthesis.getVoices();
-          const heVoice = voices.find(v => v.lang.includes('he'));
-          if (heVoice) utterance.voice = heVoice;
-      }
-
-      utterance.onend = () => {
-          currentSentenceIndexRef.current++;
-          speakNextSentence();
-      };
-
-      utterance.onerror = (e) => {
-          console.error("Speech Error:", e);
-          setIsSpeaking(false);
-      };
-
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+      // Prevent infinite loop by shifting the problematic sentence
+      speechQueue.current.shift();
+      
+      // Add Delay before retrying
+      setTimeout(() => {
+          if (isPlayingRef.current) {
+             playNextInQueue();
+          }
+      }, 1000);
+    }
   };
 
-  const toggleSpeech = () => {
-      if (isSpeaking) {
-          stopSpeaking();
-      } else {
-          // 1. Clean Text
-          const cleanText = lessonData.content
-              .replace(/```[\s\S]*?```/g, ' Code Block. ') // Remove code
-              .replace(/[#*_\[\]]/g, '') // Remove MD chars
-              .replace(/>\s?/g, '')
-              .replace(/!\[([^\]]*)\]\([^)]+\)/g, ' Image. ');
-
-          // 2. Split into sentences (simple regex)
-          const sentences = cleanText.match(/[^.?!]+[.?!]+["']?|[^.?!]+$/g) || [cleanText];
-          
-          sentenceQueueRef.current = sentences.map(s => s.trim()).filter(s => s.length > 0);
-          currentSentenceIndexRef.current = 0;
-          setIsSpeaking(true);
-          
-          // Small timeout to allow state update before speaking
-          setTimeout(speakNextSentence, 100);
+  // 3. Toggle Speech Main Function
+  const toggleSpeech = async () => {
+    // Stop if playing
+    if (isSpeaking) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
       }
+      speechQueue.current = []; // Clear queue
+      isPlayingRef.current = false;
+      setIsSpeaking(false);
+      return;
+    }
+
+    // Start Playing
+    setIsLoadingVoice(true);
+    setIsSpeaking(true);
+    isPlayingRef.current = true; // Set active flag
+
+    // Split and Populate Queue
+    const sentences = splitTextToSentences(lessonData.content);
+    speechQueue.current = sentences;
+
+    setIsLoadingVoice(false);
+    
+    // Kickoff
+    playNextInQueue();
   };
 
   useEffect(() => {
-    // Reset on lesson change
-    stopSpeaking();
     setJustCompleted(false);
     setCompletedPracticeItems([]); 
     
+    // Cleanup Audio on Unmount / Lesson Change
+    if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+    }
+    speechQueue.current = [];
+    isPlayingRef.current = false;
+    setIsSpeaking(false);
+    setIsLoadingVoice(false);
+
     if (mainContentRef.current) {
       mainContentRef.current.scrollTop = 0;
-    }
-
-    return () => {
-        stopSpeaking();
     }
   }, [lessonId]);
 
@@ -503,9 +552,15 @@ const LessonView: React.FC<LessonViewProps> = ({
 
             <button
                 onClick={toggleSpeech}
+                disabled={isLoadingVoice}
                 className={`flex items-center px-4 py-2 rounded-full font-medium transition-all duration-300 ${isSpeaking ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-700'}`}
             >
-                {isSpeaking ? (
+                {isLoadingVoice ? (
+                    <>
+                        <Loader2 className="animate-spin mr-2 rtl:ml-2 rtl:mr-0" size={18} />
+                        Loading Audio...
+                    </>
+                ) : isSpeaking ? (
                     <>
                         <Square size={16} fill="currentColor" className="mr-2 rtl:ml-2 rtl:mr-0 animate-pulse" />
                         {t.lesson.stopReading}

@@ -75,9 +75,11 @@ export const registerUserIfNew = async (userId: string, email: string) => {
     }
 };
 
-export const saveUserData = async (userId: string, completedLessons: string[]) => {
+// Updated: Save by Email
+export const saveUserData = async (email: string, completedLessons: string[]) => {
+  if (!email) return;
   try {
-    await setDoc(doc(db, "users", userId), {
+    await setDoc(doc(db, "users", email), {
       completedLessons: completedLessons,
       lastUpdated: new Date()
     }, { merge: true });
@@ -86,9 +88,11 @@ export const saveUserData = async (userId: string, completedLessons: string[]) =
   }
 };
 
-export const getUserData = async (userId: string): Promise<string[]> => {
+// Updated: Get by Email
+export const getUserData = async (email: string): Promise<string[]> => {
+  if (!email) return [];
   try {
-    const docRef = doc(db, "users", userId);
+    const docRef = doc(db, "users", email);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return docSnap.data().completedLessons || [];

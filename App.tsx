@@ -76,9 +76,11 @@ function App() {
         setUser(newUser);
         setShowGuestWarning(false);
 
-        // Fetch progress from Firestore
-        const cloudProgress = await getUserData(firebaseUser.uid);
-        setCompletedLessons(cloudProgress);
+        // Fetch progress from Firestore by Email
+        if (firebaseUser.email) {
+            const cloudProgress = await getUserData(firebaseUser.email);
+            setCompletedLessons(cloudProgress);
+        }
         
       } else {
         // User logged out
@@ -149,15 +151,15 @@ function App() {
   const handleDeleteLesson = (lessonId: string) => {
       const newCompleted = completedLessons.filter(id => id !== lessonId);
       setCompletedLessons(newCompleted);
-      if (user) {
-          saveUserData(user.id, newCompleted);
+      if (user && user.email) {
+          saveUserData(user.email, newCompleted);
       }
   };
 
   const handleResetProgress = () => {
       setCompletedLessons([]);
-      if (user) {
-          saveUserData(user.id, []);
+      if (user && user.email) {
+          saveUserData(user.email, []);
       }
   };
 
@@ -167,8 +169,8 @@ function App() {
       setCompletedLessons(newCompleted);
       
       // Save to Firestore if user is logged in
-      if (user) {
-          saveUserData(user.id, newCompleted);
+      if (user && user.email) {
+          saveUserData(user.email, newCompleted);
       }
     }
   };
