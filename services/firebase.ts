@@ -13,7 +13,8 @@ import {
     addDoc, 
     query, 
     orderBy, 
-    getDocs 
+    getDocs,
+    deleteDoc
 } from "firebase/firestore";
 
 // Firebase Configuration
@@ -100,17 +101,27 @@ export const getUserData = async (userId: string): Promise<string[]> => {
 
 // --- Voting & Stats System ---
 
-export const getLessonRating = async (lessonId: string): Promise<number> => {
+export const getLessonRating = async (lessonId: string): Promise<{score: number, userVote: 'up' | 'down' | null}> => {
   try {
     const docRef = doc(db, "ratings", lessonId);
     const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return docSnap.data().score || 0;
+    
+    let userVote: 'up' | 'down' | null = null;
+    if (auth.currentUser) {
+       const voteRef = doc(db, "users", auth.currentUser.uid, "votes", lessonId);
+       const voteSnap = await getDoc(voteRef);
+       if (voteSnap.exists()) {
+           userVote = voteSnap.data().type;
+       }
     }
-    return 0;
+
+    if (docSnap.exists()) {
+      return { score: docSnap.data().score || 0, userVote };
+    }
+    return { score: 0, userVote };
   } catch (e) {
     console.error("Error fetching rating", e);
-    return 0;
+    return { score: 0, userVote: null };
   }
 };
 
@@ -136,70 +147,91 @@ export const getGlobalStats = async (): Promise<GlobalStats> => {
     }
 }
 
-// FIX: Reads strictly before Writes to avoid "Reads must be executed before writes" error
+// Logic handles: Add Vote, Remove Vote (Toggle), Switch Vote
 export const voteLesson = async (lessonId: string, voteType: 'up' | 'down', userId?: string) => {
+    if (!userId) return false;
+
     const ratingRef = doc(db, "ratings", lessonId);
     const globalStatsRef = doc(db, "stats", "global");
-    const userVoteRef = userId ? doc(db, "users", userId, "votes", lessonId) : null;
+    const userVoteRef = doc(db, "users", userId, "votes", lessonId);
 
     try {
         await runTransaction(db, async (transaction) => {
-            // Step 1: Perform ALL reads first
-            let userVoteSnap = null;
-            if (userVoteRef) {
-                userVoteSnap = await transaction.get(userVoteRef);
-            }
+            // Step 1: Perform ALL reads
+            const userVoteSnap = await transaction.get(userVoteRef);
             const ratingSnap = await transaction.get(ratingRef);
             const globalSnap = await transaction.get(globalStatsRef);
 
-            // Step 2: Logic checks
-            // If user exists and already voted, stop here (throw error to abort transaction)
-            if (userVoteSnap && userVoteSnap.exists()) {
-                throw new Error("User already voted");
+            let previousVoteType: 'up' | 'down' | null = null;
+            if (userVoteSnap.exists()) {
+                previousVoteType = userVoteSnap.data().type;
             }
 
-            // Step 3: Perform ALL writes
-            
-            // Update Lesson Rating
+            // Prepare Initial Docs if missing
             if (!ratingSnap.exists()) {
-                transaction.set(ratingRef, { 
-                    score: voteType === 'up' ? 1 : -1, 
-                    likes: voteType === 'up' ? 1 : 0, 
-                    dislikes: voteType === 'down' ? 1 : 0 
-                });
-            } else {
-                const change = voteType === 'up' ? 1 : -1;
-                transaction.update(ratingRef, { 
-                    score: increment(change),
-                    likes: voteType === 'up' ? increment(1) : increment(0),
-                    dislikes: voteType === 'down' ? increment(1) : increment(0)
-                });
+                transaction.set(ratingRef, { score: 0, likes: 0, dislikes: 0 });
             }
-
-            // Update Global Stats
-            const change = voteType === 'up' ? 1 : -1;
             if (!globalSnap.exists()) {
-                transaction.set(globalStatsRef, { 
-                    totalScore: change, 
-                    totalStudents: 0 
-                });
-            } else {
-                transaction.update(globalStatsRef, {
-                    totalScore: increment(change)
-                });
+                transaction.set(globalStatsRef, { totalScore: 0, totalStudents: 0 });
             }
 
-            // Record User Vote
-            if (userVoteRef) {
+            // Step 2: Determine Action (Add, Remove, Switch)
+            
+            // CASE 1: REMOVE VOTE (User clicked the same button again)
+            if (previousVoteType === voteType) {
+                // Reverse the previous vote
+                const scoreChange = previousVoteType === 'up' ? -1 : 1;
+                const likeChange = previousVoteType === 'up' ? -1 : 0;
+                const dislikeChange = previousVoteType === 'down' ? -1 : 0;
+
+                transaction.update(ratingRef, {
+                    score: increment(scoreChange),
+                    likes: increment(likeChange),
+                    dislikes: increment(dislikeChange)
+                });
+                transaction.update(globalStatsRef, {
+                    totalScore: increment(scoreChange)
+                });
+                transaction.delete(userVoteRef);
+            }
+            
+            // CASE 2: SWITCH VOTE (User clicked opposite button)
+            else if (previousVoteType !== null && previousVoteType !== voteType) {
+                // Remove old effect AND Add new effect
+                // If switching Up -> Down: Score -2 (-1 to remove up, -1 to add down)
+                // If switching Down -> Up: Score +2 (+1 to remove down, +1 to add up)
+                
+                const scoreChange = voteType === 'up' ? 2 : -2;
+                
+                transaction.update(ratingRef, {
+                    score: increment(scoreChange),
+                    likes: increment(voteType === 'up' ? 1 : -1),
+                    dislikes: increment(voteType === 'down' ? 1 : -1)
+                });
+                transaction.update(globalStatsRef, {
+                    totalScore: increment(scoreChange)
+                });
+                transaction.update(userVoteRef, { type: voteType, timestamp: new Date() });
+            }
+
+            // CASE 3: NEW VOTE
+            else {
+                const scoreChange = voteType === 'up' ? 1 : -1;
+                
+                transaction.update(ratingRef, {
+                    score: increment(scoreChange),
+                    likes: increment(voteType === 'up' ? 1 : 0),
+                    dislikes: increment(voteType === 'down' ? 1 : 0)
+                });
+                transaction.update(globalStatsRef, {
+                    totalScore: increment(scoreChange)
+                });
                 transaction.set(userVoteRef, { type: voteType, timestamp: new Date() });
             }
         });
         return true;
     } catch (e) {
-        // If the error is "User already voted", we can just return false silently or log it
-        if ((e as Error).message !== "User already voted") {
-            console.error("Vote failed: ", e);
-        }
+        console.error("Vote transaction failed: ", e);
         return false;
     }
 };

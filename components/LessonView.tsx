@@ -250,9 +250,10 @@ const LessonView: React.FC<LessonViewProps> = ({
   useEffect(() => {
       // Load current rating
       if (lessonId) {
-        getLessonRating(lessonId).then(score => setLessonScore(score));
-        // Reset user vote local state when lesson changes
-        setUserVote(null); 
+        getLessonRating(lessonId).then(data => {
+            setLessonScore(data.score);
+            setUserVote(data.userVote);
+        });
       }
   }, [lessonId]);
   
@@ -283,18 +284,46 @@ const LessonView: React.FC<LessonViewProps> = ({
   };
 
   const handleVote = async (type: 'up' | 'down') => {
-      if (userVote) return; // Already voted
+      if (!auth.currentUser) return; // Must be logged in
+      const userId = auth.currentUser.uid;
 
-      const userId = auth.currentUser?.uid;
+      // Optimistic UI Update
+      const previousVote = userVote;
+      const previousScore = lessonScore;
+
+      // Calculate new visual state immediately
+      let newVote: 'up' | 'down' | null = type;
+      let scoreChange = 0;
+
+      if (previousVote === type) {
+          // Remove vote (Toggle off)
+          newVote = null;
+          scoreChange = type === 'up' ? -1 : 1;
+      } else if (previousVote === null) {
+          // New vote
+          newVote = type;
+          scoreChange = type === 'up' ? 1 : -1;
+      } else {
+          // Switch vote (e.g. Down -> Up)
+          newVote = type;
+          scoreChange = type === 'up' ? 2 : -2;
+      }
+
+      // Apply local state
+      setUserVote(newVote);
+      setLessonScore(prev => prev + scoreChange);
+
+      if (newVote === 'down') {
+          setShowFeedbackModal(true);
+      }
+
+      // Perform actual request
       const success = await voteLesson(lessonId, type, userId);
       
-      if (success) {
-          setUserVote(type);
-          setLessonScore(prev => type === 'up' ? prev + 1 : prev - 1);
-          
-          if (type === 'down') {
-              setShowFeedbackModal(true);
-          }
+      // Revert if failed (optional safety)
+      if (!success) {
+          setUserVote(previousVote);
+          setLessonScore(previousScore);
       }
   };
 
@@ -587,37 +616,42 @@ const LessonView: React.FC<LessonViewProps> = ({
             </div>
         </div>
 
-        {/* Voting Section */}
-        <div className="mb-20 bg-slate-100 dark:bg-slate-800/50 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+        {/* Voting Section (Redesigned) */}
+        <div className="mb-20 bg-slate-100 dark:bg-slate-800/50 rounded-2xl p-6 flex flex-col items-center justify-center text-center border border-slate-200 dark:border-slate-700/50">
              <h3 className="text-slate-500 dark:text-slate-400 font-medium mb-4">{t.lesson.voteTitle}</h3>
-             <div className="flex items-center gap-6">
+             
+             <div className="flex items-center gap-6 bg-white dark:bg-slate-900 p-2 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+                 {/* Like Button */}
                  <button 
                     onClick={() => handleVote('up')}
-                    disabled={!!userVote}
                     className={`
-                        flex items-center gap-2 px-6 py-3 rounded-full transition-all duration-300
+                        p-3 rounded-full transition-all duration-300 hover:bg-green-50 dark:hover:bg-green-900/20
                         ${userVote === 'up' 
-                            ? 'bg-green-500 text-white shadow-lg scale-105' 
-                            : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600'}
-                        ${userVote && userVote !== 'up' ? 'opacity-50 cursor-not-allowed' : ''}
+                            ? 'text-green-500 bg-green-50 dark:bg-green-900/20 scale-110' 
+                            : 'text-slate-400 dark:text-slate-500 hover:text-green-500'}
                     `}
+                    title="Helpful"
                  >
-                     <ThumbsUp size={20} className={userVote === 'up' ? 'fill-current' : ''} />
-                     <span className="font-bold">{lessonScore > 0 ? `+${lessonScore}` : lessonScore}</span>
+                     <ThumbsUp size={24} className={userVote === 'up' ? 'fill-current' : ''} />
                  </button>
 
+                 {/* Score in Middle */}
+                 <div className="min-w-[40px] text-center font-bold text-xl text-slate-700 dark:text-slate-200">
+                    {lessonScore > 0 ? `+${lessonScore}` : lessonScore}
+                 </div>
+
+                 {/* Dislike Button */}
                  <button 
                     onClick={() => handleVote('down')}
-                    disabled={!!userVote}
                     className={`
-                         flex items-center gap-2 px-4 py-3 rounded-full transition-all duration-300
+                        p-3 rounded-full transition-all duration-300 hover:bg-red-50 dark:hover:bg-red-900/20
                         ${userVote === 'down' 
-                            ? 'bg-red-500 text-white shadow-lg scale-105' 
-                            : 'bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500'}
-                        ${userVote && userVote !== 'down' ? 'opacity-50 cursor-not-allowed' : ''}
+                            ? 'text-red-500 bg-red-50 dark:bg-red-900/20 scale-110' 
+                            : 'text-slate-400 dark:text-slate-500 hover:text-red-500'}
                     `}
+                    title="Not Helpful"
                  >
-                     <ThumbsDown size={20} className={userVote === 'down' ? 'fill-current' : ''} />
+                     <ThumbsDown size={24} className={userVote === 'down' ? 'fill-current' : ''} />
                  </button>
              </div>
         </div>
