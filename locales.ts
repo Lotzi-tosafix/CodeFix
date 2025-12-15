@@ -16,7 +16,7 @@ export const en: TranslationStructure = {
   },
   admin: {
     title: "Admin Dashboard",
-    godMode: "God Mode (Unlock All)",
+    godMode: "Admin Mode (Unlock All)",
     godModeDesc: "Enable to unlock all courses and lessons instantly for testing.",
     tabs: {
         messages: "Contact Messages",
@@ -51,7 +51,7 @@ export const en: TranslationStructure = {
     resetConfirm: "Are you sure? This cannot be undone.",
     noProgress: "You haven't completed any lessons yet.",
     hello: "Hello",
-    adminMode: "Developer Mode",
+    adminMode: "Admin Mode",
     adminModeDesc: "Unlock all content for testing"
   },
   hero: {
@@ -196,7 +196,7 @@ export const he: TranslationStructure = {
   },
   admin: {
     title: "דשבורד ניהול",
-    godMode: "מצב אלוהים (God Mode)",
+    godMode: "מצב מנהל (Admin Mode)",
     godModeDesc: "הפעל כדי לפתוח את כל הקורסים והשיעורים באופן מיידי לבדיקה.",
     tabs: {
         messages: "הודעות צור קשר",
@@ -231,7 +231,7 @@ export const he: TranslationStructure = {
     resetConfirm: "האם אתה בטוח? פעולה זו לא ניתנת לביטול.",
     noProgress: "טרם השלמת שיעורים. זה הזמן להתחיל!",
     hello: "שלום",
-    adminMode: "מצב מפתח (God Mode)",
+    adminMode: "מצב מנהל",
     adminModeDesc: "פתח את כל התוכן לבדיקה"
   },
   hero: {
