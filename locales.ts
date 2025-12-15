@@ -35,7 +35,7 @@ export const en: TranslationStructure = {
   auth: {
     guestWarningTitle: "You are in Guest Mode",
     guestWarningDesc: "Your progress is NOT saved. Login to sync your journey across devices and keep your achievements.",
-    loginWithGoogle: "Sign in with Google",
+    loginWithGoogle: "Login",
     loginSuccess: "Welcome back!",
     logoutSuccess: "Logged out successfully",
     loginTitle: "Join CodeFix",
@@ -213,7 +213,7 @@ export const he: TranslationStructure = {
   auth: {
     guestWarningTitle: "אתה גולש במצב אורח",
     guestWarningDesc: "ההתקדמות שלך לא נשמרת! כדי לסנכרן את הלמידה ולשמור על ההישגים, מומלץ להתחבר.",
-    loginWithGoogle: "כניסה עם Google",
+    loginWithGoogle: "התחברות",
     loginSuccess: "איזה כיף שחזרת!",
     logoutSuccess: "התנתקת בהצלחה",
     loginTitle: "התחברות ל-CodeFix",
