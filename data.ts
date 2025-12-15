@@ -237,7 +237,7 @@ The page must include the following elements in order:
   ];
 };
 
-// Content Dictionary with Practice Items (unchanged part)
+// Content Dictionary with Practice Items
 const lessonContentHe: Record<string, {title: string, content: string, practice?: PracticeItem[]}> = {
   'web-intro': {
     title: 'איך האינטרנט עובד?',
@@ -419,4 +419,79 @@ HTML היא לא "שפת תכנות" במובן הקלאסי (אין בה חיש
 
 ## 3. השווה: \`=\` (הגדרות נוספות)
 
-לפעמים הפקודה הבסיסית (כמו "צור כפתור") לא מספיקה. אנחנו רוצים לתת לה **הגדרות נוס
+לפעמים הפקודה הבסיסית (כמו "צור כפתור") לא מספיקה. אנחנו רוצים לתת לה **הגדרות נוספות** או "תוספות" (כמו תוספות לפיצה).
+
+הסימן \`=\` מחבר בין **שם התוספת** לבין **הערך שלה**.
+
+**דוגמה פשוטה:**
+נניח שאנחנו רוצים להגיד לדפדפן שהטקסט בפסקה צריך להיות מימין לשמאל (כמו בעברית).
+נשתמש במאפיין שנקרא \`dir\` (קיצור של Direction) וניתן לו את הערך \`rtl\` (Right to Left).
+
+\`\`\`html
+<p dir="rtl">טקסט מימין לשמאל</p>
+\`\`\`
+
+כאן אמרנו: לפסקה הזו (\`p\`) יש הגדרה (\`dir\`) ששווה ל-\`rtl\`.
+בהמשך הקורס נלמד על הרבה סוגים של הגדרות, למשל קישור לאתר אחר, צבעים ועוד. הרעיון תמיד זהה: \`שם="ערך"\`.
+
+## 4. הגרשיים: \`"..."\` (המכולה)
+
+מתי צריך לשים גרשיים ומתי לא? זה מבלבל הרבה מתחילים.
+
+הכלל פשוט: **האם זה מידע טכני לדפדפן או תוכן למשתמש?**
+
+### בתוך התגית (מידע טכני) -> צריך גרשיים
+כשאנחנו נותנים ערך למאפיין (כמו \`rtl\` בדוגמה למעלה), אנחנו חייבים "לארוז" אותו בגרשיים.
+למה? כדי שהדפדפן יידע בדיוק איפה הערך מתחיל ואיפה הוא נגמר, במיוחד אם יש רווחים.
+*   נכון: \`dir="rtl"\`
+*   לא נכון: \`dir=rtl\`
+
+### בין התגיות (תוכן למשתמש) -> לא צריך גרשיים
+כשאנחנו כותבים את הטקסט שיופיע על המסך, אנחנו **לא** שמים גרשיים (אלא אם אנחנו רוצים שיראו אותם כחלק מהטקסט).
+*   נכון: \`<button>לחץ כאן</button>\`
+*   לא נכון: \`<button>"לחץ כאן"</button>\` (זה יציג את הגרשיים על הכפתור וזה מכוער).
+    `,
+    practice: [
+      {
+        type: 'quiz',
+        id: 'q_syntax_1',
+        question: 'מה התפקיד של הסימן "=" (שווה) בתוך תגית?',
+        options: ['לבצע חישוב מתמטי', 'לחבר בין שם של מאפיין (הגדרה) לערך שלו', 'ליצור תגית חדשה'],
+        correctAnswer: 1,
+        explanation: 'השווה משמש להשמה: הוא קובע שמאפיין מסוים יקבל ערך מסוים. למשל dir="rtl".'
+      },
+      {
+        type: 'quiz',
+        id: 'q_syntax_2',
+        question: 'מתי אנחנו חייבים להשתמש בגרשיים ("...")?',
+        options: ['תמיד, סביב כל מילה בקוד', 'רק כשאנחנו כותבים טקסט שיופיע למשתמש על המסך', 'בתוך תגית הפתיחה, כשאנחנו מגדירים ערך למאפיין'],
+        correctAnswer: 2,
+        explanation: 'גרשיים משמשים כדי "לארוז" ערכים טכניים בתוך תגית הפתיחה. למשל style="color:red". בתוכן הרגיל לא שמים גרשיים.'
+      }
+    ]
+  },
+};
+
+// Helper function to get content safely
+export const getLessonContent = (lessonId: string, lang: Language): Lesson => {
+  const isHe = lang === 'he';
+  
+  // 1. Try to get from Hebrew Dictionary
+  if (isHe && lessonContentHe[lessonId]) {
+      return { 
+          id: lessonId, 
+          ...lessonContentHe[lessonId], 
+          description: '' // Description is handled in getCourseData for the list view
+      }; 
+  }
+
+  // 2. Fallback / Default Content for testing
+  return { 
+      id: lessonId, 
+      title: isHe ? 'שיעור בבנייה' : 'Lesson Under Construction', 
+      description: '', 
+      content: isHe 
+        ? '# השיעור עדיין בבנייה\n\nאנחנו עובדים על התוכן הזה ממש עכשיו. חזור בקרוב!' 
+        : '# Under Construction\n\nWe are working on this content right now. Check back soon!' 
+  };
+};
