@@ -2,15 +2,17 @@
 import React, { useEffect, useState } from 'react';
 import { ContactMessage, LessonFeedback, TranslationStructure, User } from '../types';
 import { getAdminMessages, getAdminFeedback } from '../services/firebase';
-import { Loader2, Mail, MessageSquare, ShieldAlert } from 'lucide-react';
+import { Loader2, Mail, MessageSquare, ShieldAlert, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface AdminDashboardProps {
   t: TranslationStructure;
   user: User | null;
+  isGodMode: boolean;
+  toggleGodMode: () => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ t, user }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ t, user, isGodMode, toggleGodMode }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'messages' | 'feedback'>('messages');
   const [messages, setMessages] = useState<ContactMessage[]>([]);
@@ -69,7 +71,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ t, user }) => {
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-4 md:mb-0">
             {t.admin.title}
         </h1>
@@ -90,6 +92,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ t, user }) => {
                 {t.admin.tabs.feedback} ({feedbacks.length})
             </button>
         </div>
+      </div>
+
+      {/* God Mode Toggle Card */}
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 mb-8 flex items-center justify-between transition-all hover:border-brand-500/50">
+        <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-full ${isGodMode ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-slate-100 text-slate-400 dark:bg-slate-700/50'}`}>
+                <Zap size={24} className={isGodMode ? 'fill-current' : ''} />
+            </div>
+            <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    {t.admin.godMode}
+                </h2>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">{t.admin.godModeDesc}</p>
+            </div>
+        </div>
+        <button
+            onClick={toggleGodMode}
+            className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 ${isGodMode ? 'bg-brand-600' : 'bg-slate-200 dark:bg-slate-600'}`}
+        >
+            <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform duration-200 ease-in-out shadow-sm ${isGodMode ? 'translate-x-7' : 'translate-x-1'}`} />
+        </button>
       </div>
 
       {loading ? (

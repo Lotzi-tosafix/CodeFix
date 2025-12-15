@@ -53,6 +53,9 @@ function App() {
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [showGuestWarning, setShowGuestWarning] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
+  
+  // God Mode State (Unlocked only via Admin Dashboard)
+  const [isGodMode, setIsGodMode] = useState(false);
 
   // Initialize Firebase Auth Listener
   useEffect(() => {
@@ -87,6 +90,7 @@ function App() {
         setUser(null);
         setCompletedLessons([]);
         setShowGuestWarning(true);
+        setIsGodMode(false); // Reset God Mode on logout
       }
       setAuthInitialized(true);
     });
@@ -241,10 +245,31 @@ function App() {
         <main className="relative">
             <Routes>
                 <Route path="/" element={<Hero t={t} lang={lang} courseData={courseData} />} />
-                <Route path="/curriculum" element={<Curriculum t={t} completedLessons={completedLessons} courseData={courseData} user={user} />} />
+                <Route 
+                    path="/curriculum" 
+                    element={
+                        <Curriculum 
+                            t={t} 
+                            completedLessons={completedLessons} 
+                            courseData={courseData} 
+                            user={user}
+                            isGodMode={isGodMode}
+                        />
+                    } 
+                />
                 <Route path="/about" element={<About t={t} />} />
                 <Route path="/contact" element={<Contact t={t} />} />
-                <Route path="/admin" element={<AdminDashboard t={t} user={user} />} />
+                <Route 
+                    path="/admin" 
+                    element={
+                        <AdminDashboard 
+                            t={t} 
+                            user={user} 
+                            isGodMode={isGodMode}
+                            toggleGodMode={() => setIsGodMode(!isGodMode)}
+                        />
+                    } 
+                />
                 
                 <Route 
                     path="/course/:courseId" 
@@ -254,6 +279,7 @@ function App() {
                             courseData={courseData}
                             completedLessons={completedLessons}
                             user={user}
+                            isGodMode={isGodMode}
                         />
                     } 
                 />

@@ -9,9 +9,10 @@ interface CurriculumProps {
   completedLessons: string[];
   courseData: Module[];
   user: User | null;
+  isGodMode: boolean;
 }
 
-const Curriculum: React.FC<CurriculumProps> = ({ t, completedLessons, courseData, user }) => {
+const Curriculum: React.FC<CurriculumProps> = ({ t, completedLessons, courseData, user, isGodMode }) => {
   const navigate = useNavigate();
 
   const getIcon = (iconName: string) => {
@@ -24,8 +25,6 @@ const Curriculum: React.FC<CurriculumProps> = ({ t, completedLessons, courseData
       default: return <Globe size={28} />;
     }
   };
-
-  const isAdmin = user?.isAdmin || false;
 
   const handleModuleClick = (moduleId: string) => {
     navigate(`/course/${moduleId}`);
@@ -45,8 +44,8 @@ const Curriculum: React.FC<CurriculumProps> = ({ t, completedLessons, courseData
           const progressPercent = totalLessons === 0 ? 0 : Math.round((completedCount / totalLessons) * 100);
           const isStarted = completedCount > 0;
           
-          // Override lock if admin
-          const isLocked = mod.locked && !isAdmin;
+          // Override lock if God Mode is active
+          const isLocked = mod.locked && !isGodMode;
 
           return (
             <div 
@@ -78,8 +77,8 @@ const Curriculum: React.FC<CurriculumProps> = ({ t, completedLessons, courseData
                     `}>
                     {t.curriculum.levels[mod.levelKey]}
                     </span>
-                    {isAdmin && mod.locked && (
-                         <span className="text-[10px] font-bold uppercase tracking-wider text-brand-500 dark:text-brand-400 flex items-center">
+                    {isGodMode && mod.locked && (
+                         <span className="text-[10px] font-bold uppercase tracking-wider text-brand-500 dark:text-brand-400 flex items-center mt-1">
                              <Unlock size={10} className="mr-1" /> Admin Open
                          </span>
                     )}

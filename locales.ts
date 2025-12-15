@@ -16,6 +16,8 @@ export const en: TranslationStructure = {
   },
   admin: {
     title: "Admin Dashboard",
+    godMode: "God Mode (Unlock All)",
+    godModeDesc: "Enable to unlock all courses and lessons instantly for testing.",
     tabs: {
         messages: "Contact Messages",
         feedback: "Lesson Feedback"
@@ -194,6 +196,8 @@ export const he: TranslationStructure = {
   },
   admin: {
     title: "דשבורד ניהול",
+    godMode: "מצב אלוהים (God Mode)",
+    godModeDesc: "הפעל כדי לפתוח את כל הקורסים והשיעורים באופן מיידי לבדיקה.",
     tabs: {
         messages: "הודעות צור קשר",
         feedback: "משובי דיסלייק"

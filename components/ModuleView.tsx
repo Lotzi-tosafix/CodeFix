@@ -9,9 +9,10 @@ interface ModuleViewProps {
   courseData: Module[];
   completedLessons: string[];
   user: User | null;
+  isGodMode: boolean;
 }
 
-const ModuleView: React.FC<ModuleViewProps> = ({ t, courseData, completedLessons, user }) => {
+const ModuleView: React.FC<ModuleViewProps> = ({ t, courseData, completedLessons, user, isGodMode }) => {
   const navigate = useNavigate();
   const { courseId } = useParams();
   
@@ -24,7 +25,6 @@ const ModuleView: React.FC<ModuleViewProps> = ({ t, courseData, completedLessons
   const totalLessons = module.lessons.length;
   const completedCount = module.lessons.filter(l => completedLessons.includes(l.id)).length;
   const progressPercent = totalLessons === 0 ? 0 : Math.round((completedCount / totalLessons) * 100);
-  const isAdmin = user?.isAdmin || false;
 
   const getIcon = (iconName: string) => {
     switch(iconName) {
@@ -73,7 +73,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ t, courseData, completedLessons
                         `}>
                             {t.curriculum.levels[module.levelKey]}
                         </span>
-                        {isAdmin && (
+                        {isGodMode && (
                             <span className="text-xs font-bold uppercase tracking-wider py-0.5 px-2 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center">
                                 <Unlock size={10} className="mr-1" /> Dev Mode
                             </span>
@@ -108,8 +108,8 @@ const ModuleView: React.FC<ModuleViewProps> = ({ t, courseData, completedLessons
         {module.lessons.map((lesson, index) => {
             const isCompleted = completedLessons.includes(lesson.id);
             // Lock logic: Lock if it's not the first lesson AND previous lesson is not completed
-            // If isAdmin is true, logic is overridden
-            const isLocked = !isAdmin && index > 0 && !completedLessons.includes(module.lessons[index - 1].id);
+            // If isGodMode is true, logic is overridden
+            const isLocked = !isGodMode && index > 0 && !completedLessons.includes(module.lessons[index - 1].id);
             
             // Allow clicking if not locked OR if already completed (ensures completed lessons are always accessible)
             const isClickable = !isLocked || isCompleted; 

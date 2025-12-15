@@ -62,6 +62,8 @@ export interface TranslationStructure {
   };
   admin: {
     title: string;
+    godMode: string;
+    godModeDesc: string;
     tabs: {
         messages: string;
         feedback: string;
