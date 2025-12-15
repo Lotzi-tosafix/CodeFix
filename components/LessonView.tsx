@@ -500,6 +500,11 @@ const LessonView: React.FC<LessonViewProps> = ({
     audioCache.current.clear();
     currentIndexRef.current = 0;
 
+    // Scroll to top when lesson changes
+    if (mainContentRef.current) {
+        mainContentRef.current.scrollTo(0, 0);
+    }
+
     return () => {
       stopPlayback();
     };
